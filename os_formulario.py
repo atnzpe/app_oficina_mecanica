@@ -881,7 +881,7 @@ class OrdemServicoFormulario(ft.UserControl):
         """Gera um PDF do orçamento."""
         # Utilize a lógica da função gerar_pdf_os, adaptando para o orçamento
         try:
-            ordem_servico_id = "ORC"  # Ou qualquer outro identificador para orçamento
+            ordem_servico_id = "OrcamentoDe"  # Ou qualquer outro identificador para orçamento
             cliente_nome = self.cliente_dropdown.value.split(" (ID: ")[0]
             placa_carro = self.carro_dropdown.value.split("Placa: ")[1][:-1]
             data_hora_criacao = datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
@@ -989,7 +989,7 @@ class OrdemServicoFormulario(ft.UserControl):
 
         # Cabeçalho
         os_formatada = f"**ORÇAMENTO**\n\n"
-        os_formatada = f"**Cliente:** {cliente_nome}\n"
+        os_formatada += f"**Cliente:** {cliente_nome}\n"
         os_formatada += f"**Placa do Carro:** {placa_carro}\n"
         os_formatada += f"**Data do Orçamento:** {data_hora_criacao}\n\n"
 
