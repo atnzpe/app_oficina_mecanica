@@ -3,7 +3,11 @@ import os
 import flet as ft
 from database import criar_conexao_banco_de_dados, banco_de_dados, nome_banco_de_dados
 import sqlite3
+from datetime import datetime
 from flet import SnackBar, AlertDialog, Text, Column, Dropdown, ElevatedButton, TextField
+
+data_hora_criacao = datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
+
 
 def gerar_relatorio_os(conexao, page):
     """Gera relatório em PDF com Data da OS, Cliente, Carro e Valor Total."""
@@ -48,8 +52,8 @@ def gerar_relatorio_os(conexao, page):
                 pdf.cell(45, 10, txt=str(item), border=1)
             pdf.ln()
 
-        pdf.output("./report/relatorio_ordem_servico.pdf")
-        os.startfile("./report/relatorio_ordem_servico.pdf")
+        pdf.output(f"./report/relatorio_ordem_servico{data_hora_criacao}.pdf")
+        os.startfile(f"./report/relatorio_ordem_servico{data_hora_criacao}.pdf")
 
         page.snack_bar = ft.SnackBar(ft.Text("Relatório de OSs gerado com sucesso!"))
         page.snack_bar.open = True
@@ -181,6 +185,9 @@ def abrir_modal_os_por_cliente(page, clientes):
                 ElevatedButton("Gerar Relatório", on_click=gerar_relatorio_os_por_cliente),
             ]
         ),
+        actions=[
+            ft.TextButton("Fechar", on_click=fechar_modal),  # Botão Fechar
+        ]
     )
 
     page.dialog = dlg
@@ -246,3 +253,8 @@ def relatorio_os_por_cliente_data(conexao, page, cliente_id, data_inicio, data_f
     except Exception as e:
         print(f"Erro ao gerar relatório de OSs por cliente: {e}")
         mostrar_erro(page, f"Erro ao gerar relatório: {e}")
+        
+def fechar_modal(self):
+        """Fecha qualquer modal aberto."""
+        self.page.dialog.open = False
+        self.page.update()    

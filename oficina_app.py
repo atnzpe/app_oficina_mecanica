@@ -76,7 +76,7 @@ class OficinaApp:
         self.conexao_db = criar_conexao_banco_de_dados(nome_banco_de_dados)
         conexao_db = criar_conexao_banco_de_dados(nome_banco_de_dados)
         #conexao = criar_conexao_banco_de_dados(nome_banco_de_dados)
-        self.carregar_dados()
+        #self.carregar_dados()
         self.peca_dropdown = []
         self.peca_dropdown = ft.Dropdown(width=200)
 
@@ -203,7 +203,7 @@ class OficinaApp:
 
         self.view = ft.Column(
             [
-                ft.Text("Bem-vindo à oficina Guarulhos!", size=30),  # Titulo
+                ft.Text("Oficina Guarulhos", size=30),  # Titulo
                 *self.botoes.values(),
             ],
             alignment=ft.MainAxisAlignment.CENTER,
@@ -340,7 +340,7 @@ class OficinaApp:
                 
         except sqlite3.Error as e:
             raise sqlite3.Error(f"Erro ao carregar dados do banco de dados: {e}")
-
+            
         except ValueError as e: 
             print(f"Erro ao carregar dados: {e}")
         

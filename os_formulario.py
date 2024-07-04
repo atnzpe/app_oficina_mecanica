@@ -870,6 +870,13 @@ class OrdemServicoFormulario(ft.UserControl):
             if link_whatsapp:
                 self.page.launch_url(link_whatsapp)
                 self.mostrar_sucesso("Orçamento enviado com sucesso!")
+                self.limpar_campos_os()  # Limpa os campos após usar
+                self.fechar_modal_os(e)  # Fecha o modal principal
+                ft.snack_bar = ft.SnackBar(
+                    ft.Text("Orçamento enviado com sucesso!")
+                )
+                self.page.show_snack_bar(ft.snack_bar)
+                self.page.update()
             else:
                 self.mostrar_erro("Erro ao gerar link do WhatsApp.")
 
@@ -881,7 +888,7 @@ class OrdemServicoFormulario(ft.UserControl):
         """Gera um PDF do orçamento."""
         # Utilize a lógica da função gerar_pdf_os, adaptando para o orçamento
         try:
-            ordem_servico_id = "OrcamentoDe"  # Ou qualquer outro identificador para orçamento
+            ordem_servico_id = "Orcamento De"  # Ou qualquer outro identificador para orçamento
             cliente_nome = self.cliente_dropdown.value.split(" (ID: ")[0]
             placa_carro = self.carro_dropdown.value.split("Placa: ")[1][:-1]
             data_hora_criacao = datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
