@@ -1,23 +1,15 @@
 from fpdf import FPDF
 import os
 import flet as ft
-from database import criar_conexao_banco_de_dados,banco_de_dados, nome_banco_de_dados
+from database import criar_conexao_banco_de_dados, banco_de_dados, nome_banco_de_dados
 import sqlite3
-from flet import SnackBar
-
+from flet import SnackBar, AlertDialog, Text, Column, Dropdown, ElevatedButton, TextField
 
 def gerar_relatorio_os(conexao, page):
-    """
-    Gera um relatório em PDF com a Data da OS, Cliente, Carro e Valor Total da OS.
-
-    Args:
-        conexao (sqlite3.Connection): Conexão com o banco de dados.
-        page (flet.Page): Página do Flet para exibir mensagens.
-    """
+    """Gera relatório em PDF com Data da OS, Cliente, Carro e Valor Total."""
     try:
         cursor = conexao.cursor()
 
-        # Consulta SQL para obter os dados da OS, cliente e carro
         cursor.execute(
             """
             SELECT 
@@ -35,72 +27,48 @@ def gerar_relatorio_os(conexao, page):
         )
         os_data = cursor.fetchall()
 
-        # Formatar os dados para o relatório
         headers = [
             "Data da OS",
             "Cliente",
             "Carro",
-            "Valor Total da OS"
+            "Valor Total da OS",
         ]
-        data = []
+        data = [list(row) for row in os_data]
 
-        for row in os_data:
-            data.append(list(row))
-
-        # Criar o relatório em PDF
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
 
-        # Adicionar cabeçalho
         for header in headers:
-            pdf.cell(40, 10, txt=header, border=1)
+            pdf.cell(45, 10, txt=header, border=1)
         pdf.ln()
 
-        # Adicionar dados das OSs
         for row in data:
             for item in row:
-                pdf.cell(40, 10, txt=str(item), border=1)
+                pdf.cell(45, 10, txt=str(item), border=1)
             pdf.ln()
 
-        # Salvar o relatório
         pdf.output("./report/relatorio_ordem_servico.pdf")
-        
-        # Abrir o relatório gerado
         os.startfile("./report/relatorio_ordem_servico.pdf")
 
-        # Exibir mensagem de sucesso
         page.snack_bar = ft.SnackBar(ft.Text("Relatório de OSs gerado com sucesso!"))
         page.snack_bar.open = True
         page.update()
 
     except Exception as e:
         print(f"Erro ao gerar relatório de OSs: {e}")
-        page.snack_bar = ft.SnackBar(
-            ft.Text(f"Erro ao gerar relatório de OSs: {e}"), bgcolor="red"
-        )
-        page.snack_bar.open = True
-        page.update()
+        mostrar_erro(page, f"Erro ao gerar relatório de OSs: {e}")
 
 
 def gerar_relatorio_estoque(conexao, page):
-    """
-    Gera um relatório de estoque em PDF com base nos dados de movimentação de peças.
-
-    Args:
-        conexao (sqlite3.Connection): Conexão com o banco de dados.
-        page (flet.Page): Página do Flet para exibir mensagens.
-    """
+    """Gera um relatório de estoque em PDF."""
     try:
-        # Carregar os dados do estoque
         movimentacoes = carregar_dados_saldo_estoque(conexao)
 
-        # Criar o relatório em PDF
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
 
-        # Adicionar cabeçalho
         headers = [
             "ID",
             "Nome",
@@ -113,46 +81,28 @@ def gerar_relatorio_estoque(conexao, page):
             pdf.cell(30, 10, txt=header, border=1)
         pdf.ln()
 
-        # Adicionar dados das peças
         for peca in movimentacoes:
-            pdf.cell(30, 10, txt=str(peca[0]), border=1)  # ID
-            pdf.cell(30, 10, txt=str(peca[1]), border=1)  # Nome
-            pdf.cell(30, 10, txt=str(peca[2]), border=1)  # Referência
-            pdf.cell(30, 10, txt=str(peca[3]), border=1)  # Total Entradas
-            pdf.cell(30, 10, txt=str(peca[4]), border=1)  # Total Saídas
-            pdf.cell(30, 10, txt=str(peca[3] - peca[4]), border=1)  # Estoque Final
+            pdf.cell(30, 10, txt=str(peca[0]), border=1)
+            pdf.cell(30, 10, txt=str(peca[1]), border=1)
+            pdf.cell(30, 10, txt=str(peca[2]), border=1)
+            pdf.cell(30, 10, txt=str(peca[3]), border=1)
+            pdf.cell(30, 10, txt=str(peca[4]), border=1)
+            pdf.cell(30, 10, txt=str(peca[3] - peca[4]), border=1)
             pdf.ln()
 
-        # Salvar o relatório
-        pdf.output("relatorio_estoque.pdf")
+        pdf.output("./report/relatorio_estoque.pdf")
 
-        # Exibir mensagem de sucesso
-        page.snack_bar = ft.SnackBar(
-            ft.Text("Relatório de estoque gerado com sucesso!")
-        )
+        page.snack_bar = ft.SnackBar(ft.Text("Relatório de estoque gerado com sucesso!"))
         page.snack_bar.open = True
         page.update()
 
     except Exception as e:
         print(f"Erro ao gerar relatório de estoque: {e}")
-        page.snack_bar = ft.SnackBar(
-            ft.Text(f"Erro ao gerar relatório de estoque: {e}"), bgcolor="red"
-        )
-        page.snack_bar.open = True
-        page.update()
+        mostrar_erro(page, f"Erro ao gerar relatório de estoque: {e}")
 
 
 def carregar_dados_saldo_estoque(conexao):
-    """
-    Carrega os dados de movimentação de peças do banco de dados,
-    calculando o saldo final para cada peça.
-
-    Args:
-        conexao (sqlite3.Connection): Conexão com o banco de dados.
-
-    Returns:
-        list: Lista de tuplas contendo os dados de movimentação de cada peça.
-    """
+    """Carrega os dados de movimentação de peças do banco de dados."""
     cursor = conexao.cursor()
     cursor.execute(
         """
@@ -174,8 +124,125 @@ def carregar_dados_saldo_estoque(conexao):
     return movimentacoes
 
 
-def abrir_modal_os_por_cliente(self, e):
-    """Abre o modal para selecionar as OSs por cliente."""
-    # Implementar lógica para exibir e selecionar OSs por cliente aqui
-    print("Abrir modal de OSs por cliente...")
-    self.fechar_modal(e)
+def mostrar_erro(page, mensagem):
+    """Exibe uma snackbar de erro."""
+    page.snack_bar = ft.SnackBar(ft.Text(mensagem), bgcolor="red")
+    page.snack_bar.open = True
+    page.update()
+
+def abrir_modal_os_por_cliente(page, clientes):
+    """Abre o modal para consulta de OSs por cliente e data."""
+
+    cliente_dropdown = Dropdown(
+        width=200,
+        options=[ft.dropdown.Option(f"{cliente[1]} (ID: {cliente[0]})") for cliente in clientes],
+    )
+    data_inicio_field = TextField(label="Data Início (AAAA-MM-DD)", width=200)
+    data_fim_field = TextField(label="Data Fim (AAAA-MM-DD)", width=200)
+
+    def gerar_relatorio_os_por_cliente(e):
+        """Gera o relatório de OSs por cliente e data."""
+        cliente_selecionado = cliente_dropdown.value
+        data_inicio = data_inicio_field.value
+        data_fim = data_fim_field.value
+
+        if not all([cliente_selecionado, data_inicio, data_fim]):
+            mostrar_erro(page, "Preencha todos os campos!")
+            return
+
+        try:
+            cliente_id = int(cliente_selecionado.split(" (ID: ")[1][:-1])
+            datetime.strptime(data_inicio, "%Y-%m-%d")  # Valida formato da data
+            datetime.strptime(data_fim, "%Y-%m-%d")  # Valida formato da data
+
+            with criar_conexao_banco_de_dados(nome_banco_de_dados) as conexao:
+                relatorio_os_por_cliente_data(conexao, page, cliente_id, data_inicio, data_fim)
+
+            dlg.open = False
+            page.update()
+
+        except ValueError:
+            mostrar_erro(page, "Formato de data inválido. Use AAAA-MM-DD.")
+        except Exception as e:
+            print(f"Erro ao gerar relatório de OSs por cliente: {e}")
+            mostrar_erro(page, f"Erro ao gerar relatório: {e}")
+
+    dlg = AlertDialog(
+        modal=True,
+        title=Text("Relatório de OSs por Cliente"),
+        content=Column(
+            [
+                Text("Selecione o Cliente:"),
+                cliente_dropdown,
+                Text("Data Início (AAAA-MM-DD):"),
+                data_inicio_field,
+                Text("Data Fim (AAAA-MM-DD):"),
+                data_fim_field,
+                ElevatedButton("Gerar Relatório", on_click=gerar_relatorio_os_por_cliente),
+            ]
+        ),
+    )
+
+    page.dialog = dlg
+    dlg.open = True
+    page.update()
+
+
+def relatorio_os_por_cliente_data(conexao, page, cliente_id, data_inicio, data_fim):
+    """Gera o relatório de OSs por cliente e data em PDF."""
+    try:
+        cursor = conexao.cursor()
+        cursor.execute(
+            """
+            SELECT 
+                os.data_criacao,
+                c.nome AS nome_cliente,
+                car.modelo || ' - ' || car.placa AS carro,
+                os.valor_total
+            FROM 
+                ordem_servico os
+            JOIN 
+                clientes c ON os.cliente_id = c.id
+            JOIN 
+                carros car ON os.carro_id = car.id
+            WHERE 
+                os.cliente_id = ? AND os.data_criacao BETWEEN ? AND ?
+        """,
+            (cliente_id, data_inicio, data_fim),
+        )
+        os_data = cursor.fetchall()
+
+        if not os_data:
+            mostrar_erro(page, "Nenhuma OS encontrada para o período.")
+            return
+
+        headers = ["Data da OS", "Cliente", "Carro", "Valor Total da OS"]
+        data = [list(row) for row in os_data]
+
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+
+        for header in headers:
+            pdf.cell(45, 10, txt=header, border=1)
+        pdf.ln()
+
+        for row in data:
+            for item in row:
+                pdf.cell(45, 10, txt=str(item), border=1)
+            pdf.ln()
+
+        nome_cliente = os_data[0][1]  # Obter o nome do cliente do resultado da consulta
+        nome_arquivo = f"relatorio_os_{nome_cliente}_{data_inicio}_{data_fim}.pdf"
+        caminho_pasta = "./report"
+        os.makedirs(caminho_pasta, exist_ok=True)
+        caminho_arquivo = os.path.join(caminho_pasta, nome_arquivo)
+        pdf.output(caminho_arquivo)
+
+        os.startfile(caminho_arquivo)
+
+        mostrar_sucesso(page, "Relatório de OSs por cliente gerado com sucesso!")
+
+    except Exception as e:
+        print(f"Erro ao gerar relatório de OSs por cliente: {e}")
+        mostrar_erro(page, f"Erro ao gerar relatório: {e}")

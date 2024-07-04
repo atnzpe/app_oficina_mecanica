@@ -28,7 +28,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 
 # Importações de outros módulos
 from editar_cliente import EditarCliente
-from report import gerar_relatorio_os, gerar_relatorio_estoque, abrir_modal_os_por_cliente
+from report import abrir_modal_os_por_cliente, gerar_relatorio_os, gerar_relatorio_estoque
 from os_formulario import OrdemServicoFormulario
 from models import Oficina, Peca, Carro, Cliente, Usuario
 
@@ -880,7 +880,7 @@ class OficinaApp:
                             ),
                             ft.ElevatedButton(
                                 "OS por Cliente",
-                                on_click=abrir_modal_os_por_cliente,  # Implementar lógica depois
+                                on_click=lambda e: abrir_modal_os_por_cliente(self.page, self.clientes),  # Implementar lógica depois
                             ),
                         ]
                     ),
