@@ -1,0 +1,4 @@
+flet
+bcrypt
+reportlab
+fpdf
