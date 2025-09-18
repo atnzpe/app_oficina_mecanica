@@ -4,8 +4,8 @@
 # MÓDULO DO VIEWMODEL DE LOGIN (login_viewmodel.py)
 #
 # ATUALIZAÇÃO:
-#   - Após o login, o ViewModel agora verifica se o usuário precisa passar
-#     pelo onboarding e o redireciona para a rota correta.
+#   - Adicionado o método `login_google` como um placeholder para resolver o
+#     `AttributeError` que ocorria na inicialização da LoginView.
 # =================================================================================
 import flet as ft
 import logging
@@ -24,6 +24,7 @@ class LoginViewModel:
         self._view = view
 
     def login(self, e):
+        """Lógica executada ao clicar no botão de login principal."""
         if not self._view: return
 
         dados = self._view.obter_dados_login()
@@ -36,25 +37,34 @@ class LoginViewModel:
             self._view.mostrar_erro("Usuário e senha são obrigatórios.")
             return
 
+        # Notifica a View para mostrar o anel de progresso.
         self._view.mostrar_progresso(True)
 
         utilizador_autenticado = auth_service.authenticate_user(username, password)
 
+        # Notifica a View para esconder o anel de progresso.
         self._view.mostrar_progresso(False)
 
         if utilizador_autenticado:
             logger.info(f"ViewModel: Login bem-sucedido para '{username}'.")
-            # Guarda o usuário logado na sessão da página.
             self.page.session.set("usuario_logado", utilizador_autenticado)
             
-            # --- NOVA LÓGICA DE ONBOARDING ---
-            # Verifica se o usuário já configurou a oficina.
+            # Lógica de redirecionamento para Onboarding ou Dashboard.
             if queries.has_establishment(utilizador_autenticado.id):
-                # Se sim, vai para o dashboard.
                 self.page.go("/dashboard")
             else:
-                # Se não, vai para a tela de onboarding.
                 self.page.go("/onboarding")
         else:
             logger.warning(f"ViewModel: Credenciais inválidas para '{username}'.")
             self._view.mostrar_erro("Usuário ou senha inválidos.")
+
+    # --- FUNÇÃO ADICIONADA ---
+    def login_google(self, e):
+        """
+        Lógica para o futuro login com Google. Atualmente é um placeholder.
+        """
+        # Log para registrar que o botão foi clicado.
+        logging.info("ViewModel: Botão 'Login com Google' clicado. Funcionalidade a ser implementada.")
+        # Mostra uma mensagem informativa para o usuário na própria tela.
+        if self._view:
+            self._view.mostrar_erro("Login com Google ainda não implementado.")

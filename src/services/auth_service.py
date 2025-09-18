@@ -7,7 +7,7 @@
 #           Este módulo lida com hashing de senhas e orquestra o registro
 #           e a autenticação de usuários, usando o módulo de queries.
 # =================================================================================
-
+import sqlite3
 import bcrypt
 import logging
 from src.database import queries  # Importa o módulo de queries.

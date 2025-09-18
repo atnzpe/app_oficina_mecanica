@@ -3,18 +3,11 @@
 # =================================================================================
 # MÓDULO DO VIEWMODEL DO DASHBOARD (dashboard_viewmodel.py)
 #
-# OBJETIVO: Conter a lógica de negócio e o estado da DashboardView.
-#
-# SEÇÕES ALTERADAS NESTA REATORAÇÃO (ISSUE #1 - INTEGRAÇÃO FINAL):
-#   - O construtor `__init__` agora instancia as Views dos componentes filhos
-#     (`EditarClienteView`, `OrdemServicoFormularioView`), tornando-as parte
-#     do estado do Dashboard.
-#   - Os métodos como `abrir_edicao_cliente` agora delegam a chamada diretamente
-#     para os métodos públicos das instâncias das Views filhas (ex: `abrir_modal`).
-#
-# SEÇÕES SEM ALTERAÇÃO:
-#   - A lógica de gestão de estado (`usuario_atual`) e a comunicação com a sua
-#     própria View (`_view`) permanecem as mesmas.
+# CORREÇÃO (BUG FIX):
+#   - O construtor `__init__` agora busca ativamente o usuário logado na
+#     sessão da página (`page.session`). Isso permite que o ViewModel já
+#     "nasça" sabendo se há um usuário logado, sem precisar de uma chamada
+#     de atualização posterior.
 # =================================================================================
 import flet as ft
 import logging
@@ -31,17 +24,22 @@ class DashboardViewModel:
     def __init__(self, page: ft.Page):
         """
         Construtor do ViewModel.
-        :param page: A referência à página principal do Flet para controlo de modais.
+        :param page: A referência à página principal do Flet.
         """
         self.page = page
-        # Estado: Armazena o utilizador que está logado.
-        self.usuario_atual: Usuario | None = None
         # Referência à View que este ViewModel controla.
         self._view: 'DashboardView' | None = None
 
-        # --- INTEGRAÇÃO DOS COMPONENTES FILHOS ---
+        # --- LÓGICA ATUALIZADA ---
+        # Ao ser criado, o ViewModel imediatamente verifica a sessão da página
+        # para ver se um objeto 'usuario_logado' foi salvo pelo LoginViewModel.
+        self.usuario_atual: Usuario | None = self.page.session.get("usuario_logado")
+        if self.usuario_atual:
+            logging.info(f"DashboardViewModel iniciado para o usuário: {self.usuario_atual.nome}")
+        else:
+            logging.warning("DashboardViewModel iniciado sem um usuário na sessão.")
+
         # Instancia os componentes de View que serão apresentados no Dashboard.
-        # O DashboardViewModel é responsável por orquestrar quando estes são mostrados.
         self.editar_cliente_componente = EditarClienteView(page)
         self.os_formulario_componente = OrdemServicoFormularioView(page)
 
@@ -54,40 +52,32 @@ class DashboardViewModel:
         if self._view:
             logado = bool(self.usuario_atual)
             self._view.atualizar_botoes(logado)
+            
+    def logout(self, e):
+        """Executa o logout do usuário."""
+        logging.info(f"Usuário '{self.usuario_atual.nome}' fazendo logout.")
+        self.page.session.remove("usuario_logado")
+        self.usuario_atual = None
+        self.page.go("/login")
 
-    # --- HANDLERS DE EVENTOS (Ações dos Botões) ---
-    def simular_login(self, e):
-        """Simula um login/logout para fins de teste e desenvolvimento."""
-        if not self.usuario_atual:
-            self.usuario_atual = Usuario(id=1, nome="admin", senha="...")
-            logging.info(f"Utilizador '{self.usuario_atual.nome}' logado.")
-        else:
-            self.usuario_atual = None
-            logging.info("Utilizador deslogado.")
-        self.atualizar_estado_botoes_view()
+    # --- (O restante dos métodos permanece o mesmo) ---
 
     def abrir_cadastro_cliente(self, e):
-        """Lógica para abrir o modal de cadastro de cliente."""
         logging.info("ViewModel: Ação para abrir cadastro de cliente.")
-        # A lógica completa para este modal seria implementada aqui ou num ViewModel dedicado.
 
     def abrir_cadastro_carro(self, e):
-        """Lógica para abrir o modal de cadastro de carro."""
         logging.info("ViewModel: Ação para abrir cadastro de carro.")
 
     def abrir_edicao_cliente(self, e):
-        """Delega a ação de abrir o modal de pesquisa para o componente filho."""
         logging.info("ViewModel: A delegar para EditarClienteView.")
         self.editar_cliente_componente.abrir_modal_pesquisa(e)
 
     def abrir_form_os(self, e):
-        """Delega a ação de abrir o formulário de OS para o componente filho."""
         logging.info("ViewModel: A delegar para OrdemServicoFormularioView.")
         self.os_formulario_componente.abrir_modal(e)
 
     def sair_app(self, e):
-        """Fecha a janela da aplicação."""
-        self.page.window_destroy()
+        self.page.window.destroy()
 
     def abrir_cadastro_peca(self, e):
         logging.info("ViewModel: Ação para abrir cadastro de peça.")

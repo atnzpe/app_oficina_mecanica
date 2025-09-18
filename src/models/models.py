@@ -4,20 +4,30 @@
 # MÓDULO DE MODELOS DE DADOS (models.py)
 #
 # OBJETIVO: Centralizar a definição das estruturas de dados (entidades de negócio)
-# da aplicação. Cada classe representa uma tabela ou um conceito do domínio da oficina.
-# Usar classes em vez de tuplas ou dicionários torna o código mais legível,
-# seguro (graças ao autocompletar da IDE) e fácil de manter.
+#           da aplicação.
+#
+# CORREÇÃO (BUG FIX):
+#   - A classe `Usuario` foi atualizada para incluir o atributo `perfil` em
+#     seu construtor (`__init__`). Isso alinha o modelo de dados com a
+#     estrutura da tabela `usuarios` no banco de dados, resolvendo o
+#     `TypeError`.
 # =================================================================================
 from typing import Optional
-
 
 class Usuario:
     """Representa um usuário do sistema."""
 
-    def __init__(self, id: int, nome: str, senha: str):
+    # --- MÉTODO __init__ CORRIGIDO ---
+    # Adicionamos o parâmetro 'perfil: str'
+    def __init__(self, id: int, nome: str, senha: str, perfil: str):
+        # O identificador único do usuário no banco de dados.
         self.id: int = id
+        # O nome de login do usuário.
         self.nome: str = nome
+        # O hash da senha do usuário (nunca a senha em texto plano).
         self.senha: str = senha
+        # O perfil de acesso do usuário ('admin' ou 'mecanico').
+        self.perfil: str = perfil
 
 
 class Cliente:

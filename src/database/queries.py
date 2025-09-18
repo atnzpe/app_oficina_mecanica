@@ -1,3 +1,17 @@
+# -*- coding: utf-8 -*-
+
+# =================================================================================
+# MÓDULO DE CONSULTAS AO BANCO DE DADOS (queries.py)
+#
+# OBJETIVO: Centralizar TODAS as interações de leitura e escrita com o banco de
+#           dados. Este arquivo é a única "porta" para a base de dados,
+#           implementando o Padrão Repositório.
+#
+# VERSÃO ATUAL: Contém as funções de negócio para usuários, clientes, carros,
+#              peças e ordens de serviço, com gerenciamento de conexão seguro
+#              e logging detalhado.
+# =================================================================================
+
 # --- IMPORTAÇÕES DE BIBLIOTECAS ---
 import logging
 import sqlite3
@@ -14,6 +28,7 @@ from src.database.database import get_db_connection
 # e a segurança do código nos ViewModels.
 from src.models.models import Usuario, Cliente, Carro, Peca
 
+# --- CONFIGURAÇÃO DO LOGGER ---
 logger = logging.getLogger("DB_QUERIES")
 
 # =================================================================================
@@ -63,6 +78,42 @@ def criar_usuario(nome: str, senha_hash: str, perfil: str):
         logger.error(f"Erro ao criar usuário: {e}", exc_info=True)
         raise
 
+def has_establishment(user_id: int) -> bool:
+    """
+    Verifica se um usuário já possui um estabelecimento (oficina) cadastrado.
+    Isso determina se ele precisa passar pelo onboarding.
+    """
+    logger.debug(f"Verificando se o usuário ID {user_id} possui estabelecimento.")
+    try:
+        with get_db_connection() as conn:
+            # Simplificação: assume que a existência de qualquer cliente significa que o onboarding foi feito.
+            cursor = conn.execute("SELECT 1 FROM clientes LIMIT 1")
+            return cursor.fetchone() is not None
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao verificar estabelecimento para o usuário {user_id}: {e}", exc_info=True)
+        return False
+
+def complete_onboarding(user_id: int, user_name: str, establishment_name: str):
+    """
+    Salva os dados do onboarding.
+    - Atualiza o nome do usuário.
+    - Cria o primeiro 'cliente' que representa a própria oficina.
+    """
+    logger.info(f"Completando onboarding para o usuário ID {user_id}.")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE usuarios SET nome = ? WHERE id = ?", (user_name, user_id))
+            cursor.execute(
+                "INSERT INTO clientes (nome, telefone, endereco, email) VALUES (?, ?, ?, ?)",
+                (establishment_name, "N/A", "N/A", "N/A"),
+            )
+            conn.commit()
+            logger.info(f"Onboarding concluído. Usuário '{user_name}' e oficina '{establishment_name}' configurados.")
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao salvar dados do onboarding: {e}", exc_info=True)
+        raise
+
 # =================================================================================
 # QUERIES DE CLIENTES E CARROS
 # =================================================================================
@@ -74,7 +125,6 @@ def obter_clientes() -> List[Cliente]:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM clientes ORDER BY nome")
-            # Converte cada linha retornada em um objeto Cliente.
             return [Cliente(**row) for row in cursor.fetchall()]
     except sqlite3.Error as e:
         logger.error(f"Erro ao obter clientes: {e}", exc_info=True)
@@ -102,7 +152,6 @@ def atualizar_carro(carro_id: int, cliente_id: int) -> bool:
                 "UPDATE carros SET cliente_id = ? WHERE id = ?", (cliente_id, carro_id)
             )
             conn.commit()
-            # rowcount > 0 significa que pelo menos uma linha foi afetada, indicando sucesso.
             return cursor.rowcount > 0
     except sqlite3.Error as e:
         logger.error(f"Erro ao atualizar o carro no banco de dados: {e}", exc_info=True)
@@ -177,16 +226,13 @@ def inserir_ordem_servico(cliente_id: int, carro_id: int, pecas_quantidades: dic
         return None
     try:
         cursor = conn.cursor()
-        # Insere a Ordem de Serviço principal
         cursor.execute(
             "INSERT INTO ordem_servico (cliente_id, carro_id, data_criacao, valor_total, mao_de_obra) VALUES (?, ?, ?, ?, ?)",
             (cliente_id, carro_id, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), valor_total, mao_de_obra),
         )
-        # Pega o ID da OS que acabou de ser inserida.
         ordem_servico_id = cursor.lastrowid
         logger.debug(f"Ordem de Serviço principal criada com ID: {ordem_servico_id}.")
 
-        # Itera sobre o dicionário de peças para associá-las à OS.
         for peca_id, quantidade in pecas_quantidades.items():
             cursor.execute(
                 "INSERT INTO PecasOrdemServico (ordem_servico_id, peca_id, quantidade) VALUES (?, ?, ?)",
@@ -194,18 +240,15 @@ def inserir_ordem_servico(cliente_id: int, carro_id: int, pecas_quantidades: dic
             )
             logger.debug(f"Associada Peça ID {peca_id} (Qtd: {quantidade}) à OS ID {ordem_servico_id}.")
 
-        # Se tudo correu bem, salva todas as alterações no banco.
         conn.commit()
         logger.info(f"Ordem de serviço {ordem_servico_id} e suas peças inseridas com sucesso!")
         return ordem_servico_id
 
     except sqlite3.Error as e:
-        # Se qualquer erro ocorrer, desfaz todas as alterações desde o início da transação.
         logger.error(f"Erro ao inserir ordem de serviço: {e}", exc_info=True)
         conn.rollback()
         return None
     finally:
-        # Garante que a conexão seja fechada.
         if conn:
             conn.close()
 
@@ -220,73 +263,5 @@ def inserir_movimentacao_peca(peca_id: int, tipo_movimentacao: str, quantidade: 
             )
             conn.commit()
     except sqlite3.Error as e:
-        logger.error(f"Erro ao inserir movimentação da peça {peca_id}: {e}", exc_info=True)
-
-
-    # ... (função existente, sem alterações)
-    logger.info(f"Criando usuário '{nome}' com perfil '{perfil}'.")
-    try:
-        with get_db_connection(NOME_BANCO_DE_DADOS) as conn:
-            conn.execute(
-                "INSERT INTO usuarios (nome, senha, perfil) VALUES (?, ?, ?)",
-                (nome, senha_hash, perfil),
-            )
-            conn.commit()
-    except sqlite3.IntegrityError:
-        logger.warning(f"Tentativa de criar usuário com nome que já existe: '{nome}'.")
-        raise
-    except sqlite3.Error as e:
-        logger.error(f"Erro ao criar usuário: {e}", exc_info=True)
-        raise
-
-# --- NOVA FUNÇÃO ---
-def has_establishment(user_id: int) -> bool:
-    """
-    Verifica se um usuário já possui um estabelecimento (oficina) cadastrado.
-    Isso determina se ele precisa passar pelo onboarding.
-
-    :param user_id: O ID do usuário a ser verificado.
-    :return: True se o usuário já tem um estabelecimento, False caso contrário.
-    """
-    logger.debug(f"Verificando se o usuário ID {user_id} possui estabelecimento.")
-    try:
-        with get_db_connection(NOME_BANCO_DE_DADOS) as conn:
-            # A tabela 'clientes' será usada como análoga a 'estabelecimentos'.
-            # O primeiro cliente cadastrado pode ser a própria oficina.
-            # Para uma lógica mais robusta, uma tabela 'oficinas' seria ideal.
-            # Por simplicidade, vamos assumir que o cadastro de um primeiro cliente
-            # representa a conclusão do onboarding.
-            # NOTA: Uma futura melhoria seria criar uma tabela `oficinas`.
-            cursor = conn.execute("SELECT 1 FROM clientes LIMIT 1") # Simplificação
-            return cursor.fetchone() is not None
-    except sqlite3.Error as e:
-        logger.error(f"Erro ao verificar estabelecimento para o usuário {user_id}: {e}", exc_info=True)
-        return False
-
-# --- NOVA FUNÇÃO ---
-def complete_onboarding(user_id: int, user_name: str, establishment_name: str):
-    """
-    Salva os dados do onboarding.
-    - Atualiza o nome do usuário.
-    - Cria o primeiro 'cliente' que representa a própria oficina.
-
-    :param user_id: O ID do usuário que está completando o onboarding.
-    :param user_name: O nome completo do usuário.
-    :param establishment_name: O nome da oficina a ser cadastrada como primeiro cliente.
-    """
-    logger.info(f"Completando onboarding para o usuário ID {user_id}.")
-    try:
-        with get_db_connection(NOME_BANCO_DE_DADOS) as conn:
-            cursor = conn.cursor()
-            # Atualiza o nome do usuário na tabela de usuários.
-            cursor.execute("UPDATE usuarios SET nome = ? WHERE id = ?", (user_name, user_id))
-            # Insere a oficina como o primeiro cliente.
-            cursor.execute(
-                "INSERT INTO clientes (nome, telefone, endereco, email) VALUES (?, ?, ?, ?)",
-                (establishment_name, "N/A", "N/A", "N/A"),
-            )
-            conn.commit()
-            logger.info(f"Onboarding concluído. Usuário '{user_name}' e oficina '{establishment_name}' configurados.")
-    except sqlite3.Error as e:
-        logger.error(f"Erro ao salvar dados do onboarding: {e}", exc_info=True)
+        logger.error(f"Erro ao inserir movimentação de peça: {e}", exc_info=True)
         raise

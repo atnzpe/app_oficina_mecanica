@@ -28,7 +28,7 @@ class OrdemServicoFormularioViewModel:
     """
     def __init__(self, page: ft.Page):
         self.page = page
-        self.conexao = get_db_connection(NOME_BANCO_DE_DADOS)
+        self.conexao = get_db_connection()
         self._view: 'OrdemServicoFormularioView' | None = None
 
         # --- Estado do Componente ---

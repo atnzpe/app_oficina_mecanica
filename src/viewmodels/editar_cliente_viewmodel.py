@@ -32,7 +32,7 @@ class EditarClienteViewModel:
         """
         self.page = page
         # Estabelece uma conexão com a base de dados.
-        self.conexao = get_db_connection(NOME_BANCO_DE_DADOS)
+        self.conexao = get_db_connection()
         # Estado: armazena o cliente que está a ser editado no momento.
         self.cliente_em_edicao: Cliente | None = None
         # Referência à View que este ViewModel controla.
