@@ -90,3 +90,5 @@ https://flet.dev/docs/publish/android
 https://github.com/atnzpe/app_oficina_mecanica/tree/feature/issue-1-mvvm-architecture (Repositório do projeto)
 
 https://github.com/flet-dev/flet (Repositório oficial do Flet)
+
+https://flet-controls-gallery.fly.dev/layout

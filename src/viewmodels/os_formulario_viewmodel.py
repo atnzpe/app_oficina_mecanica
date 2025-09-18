@@ -14,13 +14,10 @@ import flet as ft
 import logging
 from typing import List
 from src.models.models import Cliente, Carro, Peca
-from src.database.database import get_db_connection, NOME_BANCO_DE_DADOS
+from src.database.database import fila_db
 from src.database import queries
 
-# --- IMPORT CORRIGIDO ---
-# A fila de tarefas (fila_db) é a "caixa de correio" onde colocamos tarefas
-# para serem processadas em segundo plano. Sua definição original está em 'database.py'.
-from src.database.database import fila_db
+
 
 class OrdemServicoFormularioViewModel:
     """
@@ -28,7 +25,7 @@ class OrdemServicoFormularioViewModel:
     """
     def __init__(self, page: ft.Page):
         self.page = page
-        self.conexao = get_db_connection()
+        
         self._view: 'OrdemServicoFormularioView' | None = None
 
         # --- Estado do Componente ---
@@ -44,8 +41,8 @@ class OrdemServicoFormularioViewModel:
         """Carrega clientes e peças do banco para o estado do ViewModel."""
         logging.info("ViewModel-OS: Carregando dados iniciais.")
         # O ViewModel usa sua própria conexão para operações de leitura síncronas.
-        self.lista_clientes = queries.obter_clientes(self.conexao)
-        self.lista_pecas = queries.obter_pecas(self.conexao)
+        self.lista_clientes = queries.obter_clientes()
+        self.lista_pecas = queries.obter_pecas()
         if self._view:
             self._view.popular_dropdowns_iniciais(self.lista_clientes, self.lista_pecas)
 
@@ -54,7 +51,7 @@ class OrdemServicoFormularioViewModel:
         logging.info(f"ViewModel-OS: Cliente ID {cliente_id} selecionado.")
         carros = []
         if cliente_id:
-            carros = queries.obter_carros_por_cliente(self.conexao, int(cliente_id))
+            carros = queries.obter_carros_por_cliente(int(cliente_id))
         if self._view:
             self._view.popular_dropdown_carros(carros)
 

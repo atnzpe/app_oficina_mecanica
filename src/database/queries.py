@@ -117,6 +117,16 @@ def complete_onboarding(user_id: int, user_name: str, establishment_name: str):
 # =================================================================================
 # QUERIES DE CLIENTES E CARROS
 # =================================================================================
+def verificar_existencia_cliente() -> bool:
+    """Verifica se existe qualquer cliente cadastrado no banco de dados."""
+    logger.debug("Executando query para verificar se há clientes cadastrados.")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.execute("SELECT 1 FROM clientes LIMIT 1")
+            return cursor.fetchone() is not None
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao verificar a existência de cliente: {e}", exc_info=True)
+        return True
 
 def obter_clientes() -> List[Cliente]:
     """Retorna uma lista de todos os clientes."""
@@ -130,7 +140,105 @@ def obter_clientes() -> List[Cliente]:
         logger.error(f"Erro ao obter clientes: {e}", exc_info=True)
         return []
 
+def buscar_clientes_por_termo(termo: str) -> List[Cliente]:
+    """Busca clientes no banco de dados por nome, telefone ou placa do carro."""
+    logger.debug(f"Executando busca de clientes pelo termo: '{termo}'")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            query = """
+                SELECT DISTINCT c.id, c.nome, c.telefone, c.endereco, c.email
+                FROM clientes c LEFT JOIN carros car ON c.id = car.cliente_id
+                WHERE c.nome LIKE ? OR c.telefone LIKE ? OR car.placa LIKE ?
+            """
+            like_termo = f"%{termo}%"
+            cursor.execute(query, (like_termo, like_termo, like_termo))
+            return [Cliente(**row) for row in cursor.fetchall()]
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao buscar clientes por termo: {e}", exc_info=True)
+        return []
+
+# --- NOVA FUNÇÃO ---
+def atualizar_cliente(cliente_id: int, novos_dados: dict) -> bool:
+    """
+    Atualiza os dados de um cliente específico no banco de dados.
+    
+    :param cliente_id: O ID do cliente a ser atualizado.
+    :param novos_dados: Um dicionário com os novos dados do cliente.
+    :return: True se a atualização foi bem-sucedida, False caso contrário.
+    """
+    logger.info(f"Executando query para atualizar cliente ID: {cliente_id}")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE clientes SET nome = ?, telefone = ?, endereco = ?, email = ? WHERE id = ?",
+                (
+                    novos_dados["nome"],
+                    novos_dados["telefone"],
+                    novos_dados["endereco"],
+                    novos_dados["email"],
+                    cliente_id
+                )
+            )
+            conn.commit()
+            # Retorna True se a operação afetou pelo menos uma linha.
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao atualizar cliente ID {cliente_id}: {e}", exc_info=True)
+        return False
+
+
 def obter_carros_por_cliente(cliente_id: int) -> List[Carro]:
+    """Retorna uma lista de carros de um cliente específico."""
+    logger.debug(f"Executando query para obter carros do cliente ID: {cliente_id}")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM carros WHERE cliente_id = ?", (cliente_id,))
+            return [Carro(**row) for row in cursor.fetchall()]
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao obter carros do cliente {cliente_id}: {e}", exc_info=True)
+        return []
+
+def obter_clientes_por_termo(termo: str) -> List[Cliente]:
+    """Busca clientes na base de dados. Retorna uma lista de objetos `Cliente`."""
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT DISTINCT c.id, c.nome, c.telefone, c.endereco, c.email
+                FROM clientes c LEFT JOIN carros car ON c.id = car.cliente_id
+                WHERE c.nome LIKE ? OR c.telefone LIKE ? OR car.placa LIKE ?
+                """,
+                (f"%{termo}%", f"%{termo}%", f"%{termo}%"),
+            )
+    return [Cliente(**row) for row in cursor.fetchall()]
+
+
+    """Retorna uma lista de todos os clientes."""
+    logger.debug("Executando query para obter todos os clientes.")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM clientes ORDER BY nome")
+            return [Cliente(**row) for row in cursor.fetchall()]
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao obter clientes: {e}", exc_info=True)
+        return []
+
+def obter_carros_por_cliente_id(cliente_id: int) -> List[Carro]:
+    """Busca os carros de um cliente pelo ID. Retorna uma lista de objetos `Carro`."""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id, modelo, ano, cor, placa, cliente_id FROM carros WHERE cliente_id = ?",
+            (cliente_id,),
+        )
+    return [Carro(**row) for row in cursor.fetchall()]
+
+
     """Retorna uma lista de carros de um cliente específico."""
     logger.debug(f"Executando query para obter carros do cliente ID: {cliente_id}")
     try:
