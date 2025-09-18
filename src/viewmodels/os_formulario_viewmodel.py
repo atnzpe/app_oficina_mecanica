@@ -4,25 +4,23 @@
 # MÓDULO DO VIEWMODEL DO FORMULÁRIO DE OS (os_formulario_viewmodel.py)
 #
 # OBJETIVO: Conter a lógica de negócio e o estado do formulário de Ordem de Serviço.
-#           Ele carrega dados, gere a lista de peças, calcula totais e envia
-#           a OS final para ser processada.
 #
-# SEÇÕES ALTERADAS NESTA REATORAÇÃO (ISSUE #1):
-#   - Este é um ficheiro completamente novo.
-#   - Contém toda a lógica de manipulação de dados que foi extraída da View.
+# CORREÇÃO (BUG FIX):
+#   - Corrigido o caminho de importação da 'fila_db'. A fila é definida em
+#     'database.py' e deve ser importada diretamente de lá, que é sua
+#     "fonte da verdade".
 # =================================================================================
 import flet as ft
 import logging
 from typing import List
 from src.models.models import Cliente, Carro, Peca
-from src.database.database import (
-    criar_conexao_banco_de_dados,
-    NOME_BANCO_DE_DADOS,
-    obter_clientes,
-    obter_carros_por_cliente,
-    obter_pecas,
-    fila_db,
-)
+from src.database.database import get_db_connection, NOME_BANCO_DE_DADOS
+from src.database import queries
+
+# --- IMPORT CORRIGIDO ---
+# A fila de tarefas (fila_db) é a "caixa de correio" onde colocamos tarefas
+# para serem processadas em segundo plano. Sua definição original está em 'database.py'.
+from src.database.database import fila_db
 
 class OrdemServicoFormularioViewModel:
     """
@@ -30,7 +28,7 @@ class OrdemServicoFormularioViewModel:
     """
     def __init__(self, page: ft.Page):
         self.page = page
-        self.conexao = criar_conexao_banco_de_dados(NOME_BANCO_DE_DADOS)
+        self.conexao = get_db_connection(NOME_BANCO_DE_DADOS)
         self._view: 'OrdemServicoFormularioView' | None = None
 
         # --- Estado do Componente ---
@@ -45,8 +43,9 @@ class OrdemServicoFormularioViewModel:
     def carregar_dados_iniciais(self):
         """Carrega clientes e peças do banco para o estado do ViewModel."""
         logging.info("ViewModel-OS: Carregando dados iniciais.")
-        self.lista_clientes = obter_clientes(self.conexao)
-        self.lista_pecas = obter_pecas(self.conexao)
+        # O ViewModel usa sua própria conexão para operações de leitura síncronas.
+        self.lista_clientes = queries.obter_clientes(self.conexao)
+        self.lista_pecas = queries.obter_pecas(self.conexao)
         if self._view:
             self._view.popular_dropdowns_iniciais(self.lista_clientes, self.lista_pecas)
 
@@ -55,7 +54,7 @@ class OrdemServicoFormularioViewModel:
         logging.info(f"ViewModel-OS: Cliente ID {cliente_id} selecionado.")
         carros = []
         if cliente_id:
-            carros = obter_carros_por_cliente(self.conexao, int(cliente_id))
+            carros = queries.obter_carros_por_cliente(self.conexao, int(cliente_id))
         if self._view:
             self._view.popular_dropdown_carros(carros)
 
@@ -102,6 +101,7 @@ class OrdemServicoFormularioViewModel:
         }
 
         logging.info("ViewModel-OS: OS validada. Enviando para processamento na fila do DB...")
+        # Adiciona a tarefa de 'criar_ordem_servico' na fila para ser processada pela thread.
         fila_db.put(("criar_ordem_servico", dados_os))
         
         if self._view:

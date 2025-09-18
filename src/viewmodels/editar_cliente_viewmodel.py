@@ -19,7 +19,7 @@ import flet as ft
 import logging
 from typing import List
 from src.models.models import Cliente, Carro
-from src.database.database import criar_conexao_banco_de_dados, NOME_BANCO_DE_DADOS
+from src.database.database import get_db_connection, NOME_BANCO_DE_DADOS
 
 class EditarClienteViewModel:
     """
@@ -32,7 +32,7 @@ class EditarClienteViewModel:
         """
         self.page = page
         # Estabelece uma conexão com a base de dados.
-        self.conexao = criar_conexao_banco_de_dados(NOME_BANCO_DE_DADOS)
+        self.conexao = get_db_connection(NOME_BANCO_DE_DADOS)
         # Estado: armazena o cliente que está a ser editado no momento.
         self.cliente_em_edicao: Cliente | None = None
         # Referência à View que este ViewModel controla.
