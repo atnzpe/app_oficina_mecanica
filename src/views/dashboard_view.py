@@ -14,15 +14,34 @@ import flet as ft
 from src.viewmodels.dashboard_viewmodel import DashboardViewModel
 from src.styles.style import AppDimensions, AppFonts
 
+
 class DashboardView(ft.Column):
     """
     A View para a tela principal. Responsável apenas pela apresentação da UI.
     """
+
     def __init__(self, page: ft.Page):
         super().__init__()
         self.page = page
         self.view_model = DashboardViewModel(page)
         self.view_model.vincular_view(self)
+        
+        # --- NOVO: Diálogo de Boas-Vindas ---
+        # Define a aparência e o comportamento do pop-up.
+        self._dialogo_primeiro_cliente = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Bem-vindo ao Sistema de Oficina!"),
+            content=ft.Text("Percebemos que você ainda não tem clientes cadastrados. Deseja cadastrar o seu primeiro cliente agora?"),
+            actions=[
+                # O botão "Sim" delega a ação de volta para o ViewModel.
+                ft.ElevatedButton("Sim, vamos lá!", on_click=self.view_model.abrir_cadastro_cliente),
+                # O botão "Não" simplesmente fecha o diálogo.
+                ft.TextButton("Não, obrigado", on_click=self._fechar_dialogo),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+
+        
 
         # --- LÓGICA ATUALIZADA ---
         # Determina o estado de login a partir do ViewModel, que já leu a sessão.
@@ -39,7 +58,7 @@ class DashboardView(ft.Column):
             "saldo_estoque": ft.ElevatedButton("Verificar Estoque", on_click=self.view_model.abrir_saldo_estoque, icon=ft.Icons.INVENTORY_2, disabled=not is_logged_in),
             "relatorio": ft.ElevatedButton("Gerar Relatórios", on_click=self.view_model.abrir_relatorios, icon=ft.Icons.ASSESSMENT, disabled=not is_logged_in),
         }
-        
+
         # A lógica para o componente de gerir clientes também usa a flag.
         self.botoes_dashboard["gerir_clientes"].disabled = not is_logged_in
         gerir_clientes_component = self.botoes_dashboard["gerir_clientes"]
@@ -71,9 +90,30 @@ class DashboardView(ft.Column):
                 child_aspect_ratio=1.2, spacing=15, run_spacing=15,
             )
         ]
+
+    # --- NOVOS MÉTODOS DA VIEW ---
+    def mostrar_dialogo_primeiro_cliente(self):
+        """Exibe o diálogo de boas-vindas na tela."""
+        # Atribui o diálogo à página.
+        self.page.dialog = self._dialogo_primeiro_cliente
+        # Abre o diálogo.
+        self._dialogo_primeiro_cliente.open = True
+        # Atualiza a página para mostrar o diálogo.
+        self.page.update()
+
+    def _fechar_dialogo(self, e):
+        """Fecha o diálogo de boas-vindas."""
+        self._dialogo_primeiro_cliente.open = False
+        self.page.update()
         
-        # --- CHAMADA REMOVIDA ---
-        # self.view_model.atualizar_estado_botoes_view()
+    def mostrar_feedback(self, mensagem: str, sucesso: bool):
+        """Exibe uma SnackBar para feedback ao usuário."""
+        self.page.snack_bar = ft.SnackBar(
+            content=ft.Text(mensagem),
+            bgcolor=ft.Colors.GREEN_700 if sucesso else ft.Colors.RED_700
+        )
+        self.page.snack_bar.open = True
+        self.page.update()    
 
     def _criar_cartao_de_acao(self, titulo: str, controles: list):
         """Função auxiliar para criar um `ft.Card` padronizado."""
@@ -82,7 +122,8 @@ class DashboardView(ft.Column):
                 padding=15,
                 content=ft.Column(
                     controls=[
-                        ft.Text(titulo, size=AppFonts.BODY_LARGE, weight=ft.FontWeight.BOLD),
+                        ft.Text(titulo, size=AppFonts.BODY_LARGE,
+                                weight=ft.FontWeight.BOLD),
                         ft.Divider(height=10),
                         *controles,
                     ],
@@ -98,6 +139,7 @@ class DashboardView(ft.Column):
         for componente in self.botoes_dashboard.values():
             componente.disabled = not logado
         self.update()
+
 
 def DashboardViewFactory(page: ft.Page) -> ft.View:
     """Cria a View completa do Dashboard para o roteador."""

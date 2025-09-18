@@ -16,6 +16,8 @@ from src.models.models import Usuario
 # Importa as Views dos componentes que este ViewModel irá controlar.
 from src.views.editar_cliente_view import EditarClienteView
 from src.views.os_formulario_view import OrdemServicoFormularioView
+from src.database import queries
+
 
 class DashboardViewModel:
     """
@@ -46,6 +48,25 @@ class DashboardViewModel:
     def vincular_view(self, view: 'DashboardView'):
         """Estabelece a conexão de duas vias entre o ViewModel e a View."""
         self._view = view
+        # Logo após vincular, inicia a verificação.
+        self.verificar_primeiro_cliente()
+        
+    # --- NOVO MÉTODO ---
+    def verificar_primeiro_cliente(self):
+        """
+        Verifica se existem clientes e, se não, comanda a View para mostrar o diálogo.
+        """
+        # Log para registrar a ação.
+        logging.info("ViewModel: Verificando a existência de clientes para o prompt de boas-vindas.")
+        # Chama a função do nosso repositório de queries.
+        if not queries.verificar_existencia_cliente():
+            # Se não houver clientes, e a view estiver disponível...
+            if self._view:
+                # ...comanda a View para executar sua lógica de UI.
+                logging.info("Nenhum cliente encontrado. Comandando a View para exibir o diálogo.")
+                self._view.mostrar_dialogo_primeiro_cliente()
+                
+    
 
     def atualizar_estado_botoes_view(self):
         """Comunica à View que o estado dos botões precisa de ser atualizado."""
