@@ -26,7 +26,7 @@ from src.database.database import get_db_connection
 # Importa as classes de modelo para que as funções possam retornar objetos
 # fortemente tipados (ex: uma lista de Clientes), o que melhora a clareza
 # e a segurança do código nos ViewModels.
-from src.models.models import Usuario, Cliente, Carro, Peca
+from src.models.models import Usuario, Cliente, Carro, Peca, Estabelecimento
 
 # --- CONFIGURAÇÃO DO LOGGER ---
 logger = logging.getLogger("DB_QUERIES")
@@ -80,39 +80,61 @@ def criar_usuario(nome: str, senha_hash: str, perfil: str):
 
 def has_establishment(user_id: int) -> bool:
     """
-    Verifica se um usuário já possui um estabelecimento (oficina) cadastrado.
-    Isso determina se ele precisa passar pelo onboarding.
+    Verifica se um usuário já está vinculado a um estabelecimento.
     """
     logger.debug(f"Verificando se o usuário ID {user_id} possui estabelecimento.")
     try:
         with get_db_connection() as conn:
-            # Simplificação: assume que a existência de qualquer cliente significa que o onboarding foi feito.
-            cursor = conn.execute("SELECT 1 FROM clientes LIMIT 1")
-            return cursor.fetchone() is not None
+            # A query agora verifica diretamente na tabela de usuários.
+            cursor = conn.execute(
+                "SELECT id_estabelecimento FROM usuarios WHERE id = ?",
+                (user_id,)
+            )
+            user_data = cursor.fetchone()
+            # Retorna True se o usuário foi encontrado e o campo id_estabelecimento não é nulo.
+            return user_data is not None and user_data['id_estabelecimento'] is not None
     except sqlite3.Error as e:
         logger.error(f"Erro ao verificar estabelecimento para o usuário {user_id}: {e}", exc_info=True)
-        return False
+        # Retorna True em caso de erro para não bloquear o usuário.
+        return True
 
 def complete_onboarding(user_id: int, user_name: str, establishment_name: str):
     """
     Salva os dados do onboarding.
-    - Atualiza o nome do usuário.
-    - Cria o primeiro 'cliente' que representa a própria oficina.
+    1. Cria o novo estabelecimento.
+    2. Vincula o ID do novo estabelecimento ao usuário.
+    3. Atualiza o nome do usuário.
     """
-    logger.info(f"Completando onboarding para o usuário ID {user_id}.")
+    logger.info(f"Iniciando transação de onboarding para o usuário ID {user_id}.")
+    # Abre a conexão manualmente para controlar a transação.
+    conn = get_db_connection()
+    if not conn: return
+    
     try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE usuarios SET nome = ? WHERE id = ?", (user_name, user_id))
-            cursor.execute(
-                "INSERT INTO clientes (nome, telefone, endereco, email) VALUES (?, ?, ?, ?)",
-                (establishment_name, "N/A", "N/A", "N/A"),
-            )
-            conn.commit()
-            logger.info(f"Onboarding concluído. Usuário '{user_name}' e oficina '{establishment_name}' configurados.")
+        cursor = conn.cursor()
+        
+        # 1. Cria o novo estabelecimento.
+        cursor.execute("INSERT INTO estabelecimentos (nome) VALUES (?)", (establishment_name,))
+        establishment_id = cursor.lastrowid
+        logger.debug(f"Estabelecimento '{establishment_name}' criado com ID: {establishment_id}.")
+        
+        # 2. Vincula o estabelecimento ao usuário e atualiza o nome.
+        cursor.execute(
+            "UPDATE usuarios SET nome = ?, id_estabelecimento = ? WHERE id = ?",
+            (user_name, establishment_id, user_id)
+        )
+        logger.debug(f"Usuário ID {user_id} vinculado ao estabelecimento ID {establishment_id}.")
+        
+        # Confirma todas as operações.
+        conn.commit()
+        logger.info(f"Onboarding concluído com sucesso para o usuário '{user_name}'.")
     except sqlite3.Error as e:
-        logger.error(f"Erro ao salvar dados do onboarding: {e}", exc_info=True)
-        raise
+        logger.error(f"Erro ao salvar dados do onboarding. A transação será revertida (rollback): {e}", exc_info=True)
+        conn.rollback()
+        raise # Re-levanta a exceção para o ViewModel saber que algo deu errado.
+    finally:
+        if conn:
+            conn.close()
 
 # =================================================================================
 # QUERIES DE CLIENTES E CARROS
@@ -150,7 +172,31 @@ def verificar_existencia_cliente() -> bool:
         logger.error(f"Erro ao verificar a existência de cliente: {e}", exc_info=True)
         return True
 
+def criar_cliente(nome: str, telefone: str, endereco: str, email: str) -> Cliente | None:
+    """
+    Insere um novo cliente no banco de dados.
 
+    :param nome: Nome do cliente.
+    :param telefone: Telefone do cliente.
+    :param endereco: Endereço do cliente.
+    :param email: E-mail do cliente.
+    :return: O objeto Cliente criado com seu novo ID, ou None em caso de falha.
+    """
+    logger.info(f"Executando query para criar cliente: {nome}")
+    sql = "INSERT INTO clientes (nome, telefone, endereco, email) VALUES (?, ?, ?, ?)"
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, (nome, telefone, endereco, email))
+            # Pega o ID do cliente que acabou de ser inserido.
+            novo_id = cursor.lastrowid
+            conn.commit()
+            logger.info(f"Cliente '{nome}' criado com sucesso com o ID: {novo_id}.")
+            # Retorna um objeto Cliente completo.
+            return Cliente(id=novo_id, nome=nome, telefone=telefone, endereco=endereco, email=email)
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao criar cliente '{nome}': {e}", exc_info=True)
+        return None
 
 def obter_clientes() -> List[Cliente]:
     """Retorna uma lista de todos os clientes."""

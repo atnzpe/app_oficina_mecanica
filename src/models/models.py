@@ -14,6 +14,12 @@
 # =================================================================================
 from typing import Optional
 
+class Estabelecimento:
+    """Representa um estabelecimento (oficina) no sistema."""
+    def __init__(self, id: int, nome: str):
+        self.id: int = id
+        self.nome: str = nome
+
 class Usuario:
     """Representa um usuário do sistema."""
 
