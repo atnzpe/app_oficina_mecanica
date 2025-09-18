@@ -22,18 +22,15 @@ class Estabelecimento:
 
 class Usuario:
     """Representa um usuário do sistema."""
-
-    # --- MÉTODO __init__ CORRIGIDO ---
-    # Adicionamos o parâmetro 'perfil: str'
-    def __init__(self, id: int, nome: str, senha: str, perfil: str):
-        # O identificador único do usuário no banco de dados.
+    # --- CONSTRUTOR CORRIGIDO ---
+    # Adicionado `id_estabelecimento: Optional[int]` para corresponder à tabela.
+    def __init__(self, id: int, nome: str, senha: str, perfil: str, id_estabelecimento: Optional[int]):
         self.id: int = id
-        # O nome de login do usuário.
         self.nome: str = nome
-        # O hash da senha do usuário (nunca a senha em texto plano).
         self.senha: str = senha
-        # O perfil de acesso do usuário ('admin' ou 'mecanico').
         self.perfil: str = perfil
+        # Chave estrangeira que vincula o usuário a um estabelecimento.
+        self.id_estabelecimento: Optional[int] = id_estabelecimento
 
 
 class Cliente:
