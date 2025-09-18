@@ -101,7 +101,7 @@ class DashboardView(ft.Column):
         # Atualiza a página para mostrar o diálogo.
         self.page.update()
 
-    def _fechar_dialogo(self, e):
+    def fechar_dialogo(self, e):
         """Fecha o diálogo de boas-vindas."""
         self._dialogo_primeiro_cliente.open = False
         self.page.update()

@@ -85,6 +85,9 @@ class DashboardViewModel:
 
     def abrir_cadastro_cliente(self, e):
         logging.info("ViewModel: Ação para abrir cadastro de cliente.")
+        if self._view:
+            self._view.fechar_dialogos()
+            self._view.mostrar_feedback("Funcionalidade 'Novo Cliente' a ser implementada.", True)
 
     def abrir_cadastro_carro(self, e):
         logging.info("ViewModel: Ação para abrir cadastro de carro.")

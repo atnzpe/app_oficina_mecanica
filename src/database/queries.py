@@ -128,7 +128,7 @@ def verificar_existencia_cliente() -> bool:
         logger.error(f"Erro ao verificar a existência de cliente: {e}", exc_info=True)
         return True
 
-def verificar_existencia_cliente() -> bool:
+
     """
     Verifica se existe qualquer cliente cadastrado no banco de dados.
 
