@@ -1,7 +1,7 @@
 from fpdf import FPDF
 import os
 import flet as ft
-from database import criar_conexao_banco_de_dados, banco_de_dados, nome_banco_de_dados
+from src.database.database import criar_conexao_banco_de_dados, banco_de_dados, nome_banco_de_dados
 import sqlite3
 from datetime import datetime
 from flet import SnackBar, AlertDialog, Text, Column, Dropdown, ElevatedButton, TextField

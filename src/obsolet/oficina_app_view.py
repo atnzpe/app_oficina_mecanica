@@ -20,7 +20,7 @@ import bcrypt
 from src.views.editar_cliente_view import EditarCliente
 from src.views.os_formulario_view import OrdemServicoFormulario
 from src.models.models import Usuario, Cliente
-from src.database.database import (
+from src.database.Old_database import (
     criar_conexao_banco_de_dados, NOME_BANCO_DE_DADOS, fila_db, obter_clientes
 )
 
@@ -137,21 +137,21 @@ class OficinaApp:
     def _abrir_modal_cadastrar_peca(self, e): pass
     def _abrir_modal_saldo_estoque(self, e): pass
     def _abrir_modal_relatorio(self, e): pass
-    def _sair_do_app(self, e): self.page.window_destroy()
+    def _sair_do_app(self, e): self.page.window.destroy()
 
-def _sair_do_app(self, e):
-        """Encerra a aplicação."""
-        logging.info("Saindo da aplicação.")
-        self.page.window_destroy()
+    def _sair_do_app(self, e):
+            """Encerra a aplicação."""
+            logging.info("Saindo da aplicação.")
+            self.page.window.destroy()
 
     def _mostrar_feedback(self, mensagem: str, sucesso: bool):
-        """Exibe uma SnackBar para feedback ao usuário."""
-        self.page.snack_bar = ft.SnackBar(
-            content=ft.Text(mensagem),
-            bgcolor=ft.Colors.GREEN_700 if sucesso else ft.Colors.RED_700
-        )
-        self.page.snack_bar.open = True
-        self.page.update()
+            """Exibe uma SnackBar para feedback ao usuário."""
+            self.page.snack_bar = ft.SnackBar(
+                content=ft.Text(mensagem),
+                bgcolor=ft.Colors.GREEN_700 if sucesso else ft.Colors.RED_700
+            )
+            self.page.snack_bar.open = True
+            self.page.update()
 
 
 # --- SEÇÃO SEM ALTERAÇÃO (com pequenas melhorias) ---
