@@ -16,7 +16,6 @@ class CadastroClienteView:
     """
     def __init__(self, page: ft.Page):
         self.page = page
-        # A View cria sua própria instância do ViewModel.
         self.view_model = CadastroClienteViewModel(page)
         self.view_model.vincular_view(self)
 
@@ -36,7 +35,8 @@ class CadastroClienteView:
                     self._telefone_field,
                     self._endereco_field,
                     self._email_field,
-                ]
+                ],
+                tight=True, # Ajusta o tamanho do modal ao conteúdo
             ),
             actions=[
                 ft.TextButton("Cancelar", on_click=lambda e: self.fechar_modal()),
@@ -53,15 +53,15 @@ class CadastroClienteView:
         self._endereco_field.value = ""
         self._email_field.value = ""
         
-        # Atribui e abre o diálogo.
         self.page.dialog = self._dlg
         self._dlg.open = True
         self.page.update()
 
     def fechar_modal(self):
-        """Fecha o modal."""
-        self._dlg.open = False
-        self.page.update()
+        """Fecha o modal de forma segura."""
+        if hasattr(self.page, "dialog") and self.page.dialog:
+            self.page.dialog.open = False
+            self.page.update()
 
     def obter_dados_formulario(self) -> dict:
         """Envia os dados dos campos para o ViewModel."""
@@ -76,7 +76,7 @@ class CadastroClienteView:
         """Exibe uma SnackBar para feedback ao usuário."""
         self.page.snack_bar = ft.SnackBar(
             content=ft.Text(mensagem),
-            bgcolor=ft.Colors.GREEN_700 if sucesso else ft.Colors.RED_700
+            bgcolor=ft.colors.GREEN_700 if sucesso else ft.colors.RED_700
         )
         self.page.snack_bar.open = True
         self.page.update()

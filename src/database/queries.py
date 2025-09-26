@@ -139,38 +139,6 @@ def complete_onboarding(user_id: int, user_name: str, establishment_name: str):
 # =================================================================================
 # QUERIES DE CLIENTES E CARROS
 # =================================================================================
-def verificar_existencia_cliente() -> bool:
-    """Verifica se existe qualquer cliente cadastrado no banco de dados."""
-    logger.debug("Executando query para verificar se há clientes cadastrados.")
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.execute("SELECT 1 FROM clientes LIMIT 1")
-            return cursor.fetchone() is not None
-    except sqlite3.Error as e:
-        logger.error(f"Erro ao verificar a existência de cliente: {e}", exc_info=True)
-        return True
-
-
-    """
-    Verifica se existe qualquer cliente cadastrado no banco de dados.
-
-    :return: True se existir pelo menos um cliente, False caso contrário.
-    """
-    # Log para registrar a intenção da operação.
-    logger.debug("Executando query para verificar se há clientes cadastrados.")
-    try:
-        # Abre uma conexão segura com o banco de dados.
-        with get_db_connection() as conn:
-            # Cria um cursor para executar o comando SQL.
-            cursor = conn.execute("SELECT 1 FROM clientes LIMIT 1")
-            # fetchone() retornará um objeto se encontrar uma linha, ou None se não encontrar.
-            # A conversão para bool (is not None) nos dá o resultado True/False.
-            return cursor.fetchone() is not None
-    except sqlite3.Error as e:
-        # Em caso de erro, registra a falha e retorna True por segurança,
-        # para evitar mostrar o pop-up desnecessariamente.
-        logger.error(f"Erro ao verificar a existência de cliente: {e}", exc_info=True)
-        return True
 
 def criar_cliente(nome: str, telefone: str, endereco: str, email: str) -> Cliente | None:
     """
@@ -197,6 +165,17 @@ def criar_cliente(nome: str, telefone: str, endereco: str, email: str) -> Client
     except sqlite3.Error as e:
         logger.error(f"Erro ao criar cliente '{nome}': {e}", exc_info=True)
         return None
+
+def verificar_existencia_cliente() -> bool:
+    """Verifica se existe qualquer cliente cadastrado no banco de dados."""
+    logger.debug("Executando query para verificar se há clientes cadastrados.")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.execute("SELECT 1 FROM clientes LIMIT 1")
+            return cursor.fetchone() is not None
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao verificar a existência de cliente: {e}", exc_info=True)
+        return True
 
 def obter_clientes() -> List[Cliente]:
     """Retorna uma lista de todos os clientes."""

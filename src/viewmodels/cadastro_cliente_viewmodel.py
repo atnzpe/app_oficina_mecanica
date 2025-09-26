@@ -31,18 +31,15 @@ class CadastroClienteViewModel:
         if not self._view:
             return
 
-        # Pega os dados dos campos de texto através da View.
         dados = self._view.obter_dados_formulario()
         nome = dados["nome"]
         
-        # Validação simples para garantir que o nome foi preenchido.
         if not nome:
             logger.warning("Tentativa de salvar cliente sem nome.")
             self._view.mostrar_feedback("O campo 'Nome' é obrigatório.", False)
             return
 
         logger.info(f"ViewModel: Tentando salvar o novo cliente '{nome}'.")
-        # Delega a tarefa de salvar para a camada de queries.
         novo_cliente = queries.criar_cliente(
             nome=nome,
             telefone=dados["telefone"],
@@ -50,7 +47,6 @@ class CadastroClienteViewModel:
             email=dados["email"]
         )
 
-        # Comanda a View para dar feedback ao usuário.
         if novo_cliente:
             self._view.fechar_modal()
             self._view.mostrar_feedback(f"Cliente '{novo_cliente.nome}' cadastrado com sucesso!", True)
