@@ -1,21 +1,18 @@
-# -*- coding: utf-8 -*-
-
 # =================================================================================
 # MÓDULO DO VIEWMODEL DO DASHBOARD (dashboard_viewmodel.py)
 #
 # ATUALIZAÇÃO:
-#   - O ViewModel agora cria e mantém uma instância do novo
-#     `CadastroClienteView`.
-#   - O método `abrir_cadastro_cliente` agora delega a chamada para o
-#     componente de cadastro, implementando a funcionalidade real.
+#   - `abrir_cadastro_cliente`: Agora, em vez de gerenciar um modal, simplesmente
+#     navega para a rota '/cadastro_cliente'.
+#   - A instância de `CadastroClienteView` foi removida, pois a criação da
+#     view agora é responsabilidade do roteador.
 # =================================================================================
 import flet as ft
 import logging
 from src.models.models import Usuario
 from src.views.editar_cliente_view import EditarClienteView
 from src.views.os_formulario_view import OrdemServicoFormularioView
-# --- NOVO: Importa a nova View de Cadastro de Cliente ---
-from src.views.cadastro_cliente_view import CadastroClienteView
+# A importação do CadastroClienteView não é mais necessária aqui.
 from src.database import queries
 
 class DashboardViewModel:
@@ -25,7 +22,6 @@ class DashboardViewModel:
     def __init__(self, page: ft.Page):
         """
         Construtor do ViewModel.
-        :param page: A referência à página principal do Flet.
         """
         self.page = page
         self._view: 'DashboardView' | None = None
@@ -36,12 +32,10 @@ class DashboardViewModel:
         else:
             logging.warning("DashboardViewModel iniciado sem um usuário na sessão.")
 
-        # Instancia os componentes filhos que o Dashboard controla.
-        # O DashboardViewModel atua como um "orquestrador" destes componentes.
+        # O DashboardViewModel continua orquestrando os componentes que SÃO modais.
+        # O componente de cadastro de cliente foi removido daqui.
         self.editar_cliente_componente = EditarClienteView(page)
         self.os_formulario_componente = OrdemServicoFormularioView(page)
-        # --- NOVO: Instancia o componente de cadastro de cliente ---
-        self.cadastro_cliente_componente = CadastroClienteView(page)
 
     def vincular_view(self, view: 'DashboardView'):
         """
@@ -65,24 +59,23 @@ class DashboardViewModel:
         Executa o logout do usuário, limpando a sessão e redirecionando para o login.
         """
         logging.info(f"Usuário '{self.usuario_atual.nome}' fazendo logout.")
-        self.page.session.remove("usuario_logado")
+        self.page.session.clear() # Limpa toda a sessão por segurança.
         self.usuario_atual = None
         self.page.go("/login")
 
     # --- MÉTODO ATUALIZADO ---
     def abrir_cadastro_cliente(self, e):
         """
-        Delega a ação de abrir o modal para o componente de cadastro de cliente.
+        Navega o usuário para a página de cadastro de cliente.
         """
-        logging.info("ViewModel: Delegando para CadastroClienteView.")
-        # Primeiro, comanda a sua própria View para fechar qualquer diálogo que esteja aberto
-        # (como o de boas-vindas), para evitar sobreposição de modais.
+        logging.info("ViewModel: Navegando para a rota /cadastro_cliente.")
+        # Fecha qualquer diálogo aberto na página atual (como o de boas-vindas) antes de navegar.
         if self._view:
             self._view.fechar_dialogos()
-        # Em seguida, chama o método público do nosso novo componente especialista.
-        self.cadastro_cliente_componente.abrir_modal(e)
+        # Comando de navegação.
+        self.page.go("/cadastro_cliente")
 
-    # --- (O restante da classe permanece o mesmo, atuando como placeholders) ---
+    # --- (O restante da classe permanece o mesmo) ---
     def abrir_cadastro_carro(self, e):
         logging.info("ViewModel: Ação para abrir cadastro de carro.")
         if self._view: self._view.mostrar_feedback("Funcionalidade 'Novo Veículo' a ser implementada.", True)

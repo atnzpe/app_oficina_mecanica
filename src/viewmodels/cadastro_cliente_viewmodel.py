@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 
-# =================================================================================
+## =================================================================================
 # MÓDULO DO VIEWMODEL DE CADASTRO DE CLIENTE (cadastro_cliente_viewmodel.py)
 #
-# OBJETIVO: Conter a lógica de negócio e o estado do formulário de cadastro
-#           de novos clientes.
+# ATUALIZAÇÃO:
+#   - `salvar_cliente`: Após o sucesso, agora usa `self.page.go()` para navegar
+#     de volta ao dashboard em vez de fechar um modal.
+#   - `cancelar_cadastro`: Novo método para lidar com o clique no botão "Cancelar",
+#     navegando de volta ao dashboard.
 # =================================================================================
 import flet as ft
 import logging
@@ -26,15 +29,17 @@ class CadastroClienteViewModel:
 
     def salvar_cliente(self, e):
         """
-        Pega os dados da View, valida e comanda a inserção no banco de dados.
+        Pega os dados da View, valida, comanda a inserção no banco de dados e
+        redireciona o usuário.
         """
         if not self._view:
             return
 
         dados = self._view.obter_dados_formulario()
-        nome = dados["nome"]
+        nome = dados.get("nome")
         
-        if not nome:
+        # A lógica de validação permanece a mesma.
+        if not nome or not nome.strip():
             logger.warning("Tentativa de salvar cliente sem nome.")
             self._view.mostrar_feedback("O campo 'Nome' é obrigatório.", False)
             return
@@ -42,13 +47,25 @@ class CadastroClienteViewModel:
         logger.info(f"ViewModel: Tentando salvar o novo cliente '{nome}'.")
         novo_cliente = queries.criar_cliente(
             nome=nome,
-            telefone=dados["telefone"],
-            endereco=dados["endereco"],
-            email=dados["email"]
+            telefone=dados.get("telefone"),
+            endereco=dados.get("endereco"),
+            email=dados.get("email")
         )
 
         if novo_cliente:
-            self._view.fechar_modal()
+            # SUCESSO: Mostra o feedback e NAVEGA de volta para o dashboard.
+            logger.info(f"Cliente '{nome}' salvo com sucesso. Redirecionando para /dashboard.")
+            # A snackbar ainda será exibida na tela atual antes da navegação.
             self._view.mostrar_feedback(f"Cliente '{novo_cliente.nome}' cadastrado com sucesso!", True)
+            self.page.go("/dashboard")
         else:
+            # FALHA: Apenas mostra o feedback de erro.
             self._view.mostrar_feedback("Ocorreu um erro ao cadastrar o cliente.", False)
+    
+    def cancelar_cadastro(self, e):
+        """
+        Navega de volta para o dashboard sem salvar nenhuma informação.
+        """
+        logger.info("Cadastro de cliente cancelado. Redirecionando para /dashboard.")
+        self.page.go("/dashboard")
+        

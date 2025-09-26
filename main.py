@@ -1,24 +1,22 @@
-# -*- coding: utf-8 -*-
-
 # =================================================================================
-# MÓDULO DE ENTRADA DA APLICAÇÃO (main.py) - VERSÃO 3.1
+# MÓDULO DE ENTRADA DA APLICAÇÃO (main.py) - VERSÃO 3.2
 #
 # OBJETIVO: Atuar como o roteador central da aplicação.
 #
 # ATUALIZAÇÃO:
-#   - Adicionada a rota '/onboarding' para a nova tela de configuração.
-#   - A lógica do `LoginViewModel` agora irá verificar se o onboarding é
-#     necessário e redirecionará o usuário para a rota correta.
+#   - Adicionada a rota '/cadastro_cliente' para a nova tela de cadastro.
+#   - A View de cadastro de cliente agora é uma página completa, não mais um modal.
 # =================================================================================
 import flet as ft
 import threading
 import logging
 
-# Importações das Views
-from src.views.login_view import LoginView
-from src.views.dashboard_view import DashboardView
-from src.views.register_view import RegisterView
-from src.views.onboarding_view import OnboardingView # --- NOVO ---
+# Importações das Views (Factories que criam as páginas completas)
+from src.views.login_view import LoginViewFactory
+from src.views.dashboard_view import DashboardViewFactory
+from src.views.register_view import RegisterViewFactory
+# --- NOVO: Importa a nova View Factory para o cadastro de cliente ---
+from src.views.cadastro_cliente_view import CadastroClienteViewFactory
 
 # Importações de Serviços e Banco de Dados
 from src.services.task_queue_service import processar_fila_db
@@ -26,57 +24,67 @@ from src.database.database import initialize_database as inicializar_banco_de_da
 from src.database import queries
 from utils import criar_pastas
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Configuração básica do logging para monitorar a aplicação.
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - [%(filename)s] - %(message)s')
 
 def main(page: ft.Page):
     """
     Função principal que inicializa e configura a aplicação Flet.
     """
-    page.title = "Sistema OS Oficina Mecânica - v3.1"
+    page.title = "Sistema OS Oficina Mecânica - v3.2"
     page.theme_mode = ft.ThemeMode.DARK
-    # ... (outras configurações de página)
+    page.window_maximizable = True
+    page.window_maximized = True
 
-    # --- INICIALIZAÇÃO ---
+    # --- INICIALIZAÇÃO DE SERVIÇOS DE FUNDO ---
     logging.info("Iniciando serviços de fundo...")
     inicializar_banco_de_dados()
+    # A thread do banco de dados processa operações (INSERT, UPDATE) de forma assíncrona.
     thread_db = threading.Thread(target=processar_fila_db, args=(page,), daemon=True)
     thread_db.start()
     criar_pastas(".")
 
     # --- GERENCIADOR DE ROTAS ---
     def route_change(route):
+        """
+        Esta função é chamada toda vez que a URL (rota) da página muda.
+        Ela é responsável por limpar a tela e renderizar a View correta.
+        """
         logging.info(f"Navegando para a rota: {page.route}")
-        app_container = ft.Container(
-            # ... (configurações do container)
-            alignment=ft.alignment.center,
-        )
+        # Limpa a pilha de visualizações anterior para renderizar a nova.
         page.views.clear()
 
-        # Mapeamento de rotas para as Views
+        # Mapeamento de rotas para as "View Factories".
+        # Cada Factory é responsável por construir o objeto ft.View completo para aquela rota.
         if page.route == "/login":
-            app_container.content = LoginView(page)
-            page.views.append(ft.View(route="/login", controls=[app_container]))
+            view = LoginViewFactory(page)
+            page.views.append(view)
         elif page.route == "/register":
-            app_container.content = RegisterView(page)
-            page.views.append(ft.View(route="/register", controls=[app_container]))
-        # --- NOVA ROTA DE ONBOARDING ---
-        elif page.route == "/onboarding":
-            app_container.content = OnboardingView(page)
-            page.views.append(ft.View(route="/onboarding", controls=[app_container]))
+            view = RegisterViewFactory(page)
+            page.views.append(view)
         elif page.route == "/dashboard":
-            app_container.content = DashboardView(page)
-            page.views.append(ft.View(route="/dashboard", controls=[app_container]))
-        else:
-            page.go(page.route)
-            return
+            # --- Rota para a tela de Dashboard ---
+            view = DashboardViewFactory(page)
+            page.views.append(view)
+        
+        elif page.route == "/cadastro_cliente":
+            # --- Rota para a tela de cadastro de cliente ---
+            view = CadastroClienteViewFactory(page)
+            page.views.append(view)
+        
+        # Atualiza a página para mostrar a nova view.
         page.update()
 
+    # Define a função que será executada sempre que a rota mudar.
     page.on_route_change = route_change
 
     # --- LÓGICA DE ROTA INICIAL ---
+    # Ao iniciar o app, verifica se algum usuário já foi criado no banco.
     if queries.verificar_existencia_usuario():
+        # Se existe, a primeira tela é a de login.
         page.go("/login")
     else:
+        # Se não existe, a primeira tela é a de registro de um novo usuário.
         page.go("/register")
 
 if __name__ == "__main__":
