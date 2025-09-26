@@ -1,18 +1,17 @@
-# -*- coding: utf-8 -*-
-
 # =================================================================================
 # MÓDULO DA VIEW DE LOGIN (login_view.py)
 #
-# ATUALIZAÇÃO:
-#   - Adicionado o método `mostrar_progresso` para permitir que o ViewModel
-#     controle o estado visual dos botões e do anel de progresso durante a
-#     tentativa de login.
+# REATORAÇÃO:
+#   - Adicionada a `LoginViewFactory` para alinhar com o padrão de roteamento
+#     do projeto. A factory é responsável por construir o `ft.View` completo.
 # =================================================================================
 import flet as ft
 from src.viewmodels.login_viewmodel import LoginViewModel
 from src.styles.style import AppDimensions, AppFonts
 
 
+# --- CONTEÚDO DA PÁGINA ---
+# A classe LoginView agora funciona como o "recheio" da nossa página de login.
 class LoginView(ft.Column):
     """
     A View para a tela de login. Herda de `ft.Column` e organiza os controles.
@@ -55,10 +54,10 @@ class LoginView(ft.Column):
             width=AppDimensions.FIELD_WIDTH,
             height=45,
             icon=ft.Icons.LANGUAGE,
-            on_click=self.view_model.login_google, # Agora esta função existe no ViewModel
+            on_click=self.view_model.login_google,
             tooltip="Funcionalidade futura",
         )
-        self._error_text = ft.Text(value="", visible=False)
+        self._error_text = ft.Text(value="", visible=False, color=ft.Colors.RED_500)
         self._progress_ring = ft.ProgressRing(width=20, height=20, stroke_width=2, visible=False)
 
         # --- Estrutura da View ---
@@ -90,27 +89,41 @@ class LoginView(ft.Column):
             "password": self._password_field.value,
         }
 
-    # --- MÉTODO ADICIONADO ---
     def mostrar_progresso(self, visivel: bool):
         """
         Controla a visibilidade dos campos e do anel de progresso.
-        É comandado pelo ViewModel.
-
-        :param visivel: True para mostrar o progresso, False para esconder.
         """
-        # Mostra ou esconde o anel de carregamento.
         self._progress_ring.visible = visivel
-        # Desabilita os campos e botões para evitar cliques duplos.
         self._username_field.disabled = visivel
         self._password_field.disabled = visivel
         self._login_button.disabled = visivel
         self._google_login_button.disabled = visivel
-        # Atualiza a tela para refletir as mudanças.
         self.update()
 
     def mostrar_erro(self, mensagem: str):
         """Método chamado pelo ViewModel para exibir uma mensagem de erro."""
         self._error_text.value = mensagem
-        self._error_text.color = ft.Colors.RED_500
         self._error_text.visible = True
         self.update()
+
+# --- FACTORY DA VIEW ---
+# Esta é a função que o main.py irá importar e chamar.
+def LoginViewFactory(page: ft.Page) -> ft.View:
+    """
+    Cria a View completa de Login para o roteador.
+    """
+    # 1. Cria a instância do conteúdo da view.
+    view_content = LoginView(page)
+    
+    # 2. Retorna o objeto ft.View, que representa a tela inteira.
+    return ft.View(
+        route="/login",
+        # Centraliza todo o conteúdo na tela.
+        vertical_alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        controls=[
+            # Coloca o conteúdo (nossa coluna LoginView) dentro da view.
+            view_content
+        ],
+        padding=10
+    )

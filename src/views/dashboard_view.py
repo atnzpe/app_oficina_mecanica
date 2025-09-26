@@ -11,6 +11,7 @@ import flet as ft
 from src.viewmodels.dashboard_viewmodel import DashboardViewModel
 from src.styles.style import AppDimensions, AppFonts
 
+
 class DashboardView(ft.Column):
     def __init__(self, page: ft.Page):
         """
@@ -19,19 +20,8 @@ class DashboardView(ft.Column):
         super().__init__()
         self.page = page
         self.view_model = DashboardViewModel(page)
-        self._dialogo_primeiro_cliente = ft.AlertDialog(
-            modal=True,
-            title=ft.Text("Bem-vindo ao Sistema de Oficina!"),
-            content=ft.Text("Percebemos que você ainda não tem clientes cadastrados. Deseja cadastrar o seu primeiro cliente agora?"),
-            actions=[
-                ft.ElevatedButton("Sim, vamos lá!", on_click=self.view_model.abrir_cadastro_cliente),
-                ft.TextButton("Não, obrigado", on_click=self.fechar_dialogos),
-            ],
-            actions_alignment=ft.MainAxisAlignment.END,
-        )
-        self.view_model.vincular_view(self)
 
-        
+        self.view_model.vincular_view(self)
 
         is_logged_in = self.view_model.usuario_atual is not None
 
@@ -74,16 +64,9 @@ class DashboardView(ft.Column):
             )
         ]
 
-    def mostrar_dialogo_primeiro_cliente(self):
-        """Exibe o diálogo de boas-vindas na tela."""
-        self.page.dialog = self._dialogo_primeiro_cliente
-        self._dialogo_primeiro_cliente.open = True
-        self.page.update()
 
-    # --- MÉTODO CORRIGIDO ---
     def fechar_dialogos(self, e=None):
         """Fecha de forma segura qualquer diálogo que a página possa ter aberto."""
-        # Verifica se o atributo 'dialog' existe na página E se ele não é None.
         if hasattr(self.page, "dialog") and self.page.dialog is not None:
             self.page.dialog.open = False
             self.page.update()
@@ -125,7 +108,7 @@ def DashboardViewFactory(page: ft.Page) -> ft.View:
     """Cria a View completa do Dashboard para o roteador."""
     dashboard_content = DashboardView(page)
     appbar = ft.AppBar(
-        title=ft.Text("Dashboard - Oficina Mecânica"),
+        title=ft.Text("Seja Bem Vindo [nome do usuario / mecanico] - Oficina Mecânica"),
         center_title=True,
         bgcolor=ft.Colors.SURFACE,
         actions=[

@@ -1,11 +1,13 @@
-# -*- coding: utf-8 -*-
-
 # =================================================================================
 # MÓDULO DA VIEW DE REGISTRO (register_view.py)
 #
-# OBJETIVO: Definir a interface visual para o cadastro do primeiro usuário
-#           administrador. Esta tela só é acessível se não houver nenhum
-#           outro usuário no sistema.
+# REATORAÇÃO:
+#   - Adicionada a `RegisterViewFactory` para padronizar a criação da view
+#     pelo roteador em main.py.
+#   - A lógica de negócio foi movida para um novo `RegisterViewModel` para
+#     manter a separação de responsabilidades (a ser criado na próxima etapa).
+#     (NOTA: Por simplicidade nesta etapa, manteremos a lógica aqui, mas o ideal
+#      seria movê-la para um ViewModel dedicado).
 # =================================================================================
 import flet as ft
 import logging
@@ -13,6 +15,7 @@ from src.services import auth_service
 
 logger = logging.getLogger(__name__)
 
+# --- CONTEÚDO DA PÁGINA ---
 class RegisterView(ft.Column):
     """
     View para a tela de cadastro do primeiro administrador.
@@ -31,7 +34,7 @@ class RegisterView(ft.Column):
             width=300,
             prefix_icon=ft.Icons.PERSON_ADD,
             border_radius=ft.border_radius.all(10),
-            hint_text="Ex: admin@oficina.com"
+            hint_text="Ex: admin"
         )
         self._password_field = ft.TextField(
             label="Senha",
@@ -48,6 +51,7 @@ class RegisterView(ft.Column):
             can_reveal_password=True,
             prefix_icon=ft.Icons.LOCK,
             border_radius=ft.border_radius.all(10),
+            on_submit=self._handle_register_click,
         )
         self._register_button = ft.ElevatedButton(
             text="Criar Administrador e Iniciar",
@@ -76,6 +80,7 @@ class RegisterView(ft.Column):
     def _handle_register_click(self, e):
         """
         Lógica executada ao clicar no botão de registrar.
+        (Idealmente, esta lógica estaria em um RegisterViewModel).
         """
         self._error_text.visible = False
 
@@ -109,3 +114,22 @@ class RegisterView(ft.Column):
         self._error_text.value = message
         self._error_text.visible = True
         self.update()
+
+# --- FACTORY DA VIEW ---
+def RegisterViewFactory(page: ft.Page) -> ft.View:
+    """
+    Cria a View completa de Registro para o roteador.
+    """
+    # 1. Cria o conteúdo da página de registro.
+    view_content = RegisterView(page)
+
+    # 2. Retorna o objeto ft.View.
+    return ft.View(
+        route="/register",
+        vertical_alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        controls=[
+            view_content
+        ],
+        padding=10
+    )

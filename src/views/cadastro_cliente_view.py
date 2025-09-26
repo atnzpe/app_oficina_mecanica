@@ -91,7 +91,7 @@ def CadastroClienteViewFactory(page: ft.Page) -> ft.View:
     appbar = ft.AppBar(
         title=ft.Text("Cadastrar Novo Cliente"),
         center_title=True,
-        bgcolor=ft.Colors.SURFACE_VARIANT,
+        bgcolor=ft.Colors.SURFACE,
         # Adiciona um botão de voltar que também usa o sistema de rotas.
         leading=ft.IconButton(
             icon=ft.Icons.ARROW_BACK,

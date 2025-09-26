@@ -15,8 +15,8 @@ import logging
 from src.views.login_view import LoginViewFactory
 from src.views.dashboard_view import DashboardViewFactory
 from src.views.register_view import RegisterViewFactory
-# --- NOVO: Importa a nova View Factory para o cadastro de cliente ---
 from src.views.cadastro_cliente_view import CadastroClienteViewFactory
+from src.views.onboarding_cliente_view import OnboardingClienteViewFactory
 
 # Importações de Serviços e Banco de Dados
 from src.services.task_queue_service import processar_fila_db
@@ -31,7 +31,7 @@ def main(page: ft.Page):
     """
     Função principal que inicializa e configura a aplicação Flet.
     """
-    page.title = "Sistema OS Oficina Mecânica - v3.2"
+    page.title = "Sistema OS Oficina Mecânica - v3.3"
     page.theme_mode = ft.ThemeMode.DARK
     page.window_maximizable = True
     page.window_maximized = True
@@ -70,6 +70,9 @@ def main(page: ft.Page):
         elif page.route == "/cadastro_cliente":
             # --- Rota para a tela de cadastro de cliente ---
             view = CadastroClienteViewFactory(page)
+            page.views.append(view)
+        elif page.route == "/onboarding_cliente":
+            view = OnboardingClienteViewFactory(page)
             page.views.append(view)
         
         # Atualiza a página para mostrar a nova view.
