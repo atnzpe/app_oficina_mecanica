@@ -122,17 +122,14 @@ def CadastroClienteViewFactory(page: ft.Page) -> ft.View:
     """Cria a View completa de Cadastro de Cliente para o roteador."""
     view_content = CadastroClienteView(page)
 
-    # Cria a AppBar (barra de título) da página.
     appbar = ft.AppBar(
         title=ft.Text("Cadastrar Novo Cliente"),
         center_title=True,
-        # A cor de fundo é a cor de superfície do tema atual.
         bgcolor=page.theme.color_scheme.surface,
-        # Adiciona um botão de "voltar" à esquerda.
         leading=ft.IconButton(
             icon=ft.Icons.ARROW_BACK_IOS_NEW,
-            on_click=lambda _: page.go("/dashboard"),
-            tooltip="Voltar ao Dashboard"
+            on_click=lambda _: page.go("/gerir_clientes"), # Rota corrigida para voltar à lista
+            tooltip="Voltar para a Lista de Clientes"
         )
     )
 
@@ -140,7 +137,7 @@ def CadastroClienteViewFactory(page: ft.Page) -> ft.View:
         route="/cadastro_cliente",
         appbar=appbar,
         controls=[
-            # Garante que o conteúdo não sobreponha barras de status do sistema.
+            # --- SAFEAREA APLICADO ---
             ft.SafeArea(
                 content=ft.Container(
                     content=view_content,
@@ -150,6 +147,5 @@ def CadastroClienteViewFactory(page: ft.Page) -> ft.View:
                 expand=True
             )
         ],
-        # Remove o padding da View para o SafeArea gerenciar o espaçamento.
         padding=0
     )
