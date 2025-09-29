@@ -266,6 +266,26 @@ def desativar_cliente_por_id(cliente_id: int) -> bool:
         logger.error(f"Erro ao desativar cliente ID {cliente_id}: {e}", exc_info=True)
         return False
 
+def ativar_cliente_por_id(cliente_id: int) -> bool:
+    """
+    Reativa um cliente que foi desativado, setando seu status para 'ativo = 1'.
+    
+    :param cliente_id: O ID do cliente a ser ativado.
+    :return: True se a operação foi bem-sucedida, False caso contrário.
+    """
+    logger.info(f"Executando query para ATIVAR cliente ID: {cliente_id}")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            # Executa o UPDATE para marcar o cliente como ativo.
+            cursor.execute("UPDATE clientes SET ativo = 1 WHERE id = ?", (cliente_id,))
+            conn.commit()
+            # Retorna True se a operação afetou pelo menos uma linha.
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao ativar cliente ID {cliente_id}: {e}", exc_info=True)
+        return False
+
 # --- FUNÇÕES DE CARRO ---
 def criar_carro(modelo: str, ano: int, cor: str, placa: str, cliente_id: int) -> Carro | None:
     """Insere um novo carro no banco de dados."""
