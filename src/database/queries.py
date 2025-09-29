@@ -140,15 +140,11 @@ def complete_onboarding(user_id: int, user_name: str, establishment_name: str):
 # QUERIES DE CLIENTES E CARROS
 # =================================================================================
 
+
+# --- FUNÇÕES DE CLIENTE ---
 def criar_cliente(nome: str, telefone: str, endereco: str, email: str) -> Cliente | None:
     """
-    Insere um novo cliente no banco de dados.
-
-    :param nome: Nome do cliente.
-    :param telefone: Telefone do cliente.
-    :param endereco: Endereço do cliente.
-    :param email: E-mail do cliente.
-    :return: O objeto Cliente criado com seu novo ID, ou None em caso de falha.
+    Insere um novo cliente no banco de dados. O cliente é criado como 'ativo' por padrão.
     """
     logger.info(f"Executando query para criar cliente: {nome}")
     sql = "INSERT INTO clientes (nome, telefone, endereco, email) VALUES (?, ?, ?, ?)"
@@ -156,34 +152,34 @@ def criar_cliente(nome: str, telefone: str, endereco: str, email: str) -> Client
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(sql, (nome, telefone, endereco, email))
-            # Pega o ID do cliente que acabou de ser inserido.
             novo_id = cursor.lastrowid
             conn.commit()
             logger.info(f"Cliente '{nome}' criado com sucesso com o ID: {novo_id}.")
-            # Retorna um objeto Cliente completo.
-            return Cliente(id=novo_id, nome=nome, telefone=telefone, endereco=endereco, email=email)
+            return Cliente(id=novo_id, nome=nome, telefone=telefone, endereco=endereco, email=email, ativo=True)
     except sqlite3.Error as e:
         logger.error(f"Erro ao criar cliente '{nome}': {e}", exc_info=True)
         return None
 
 def verificar_existencia_cliente() -> bool:
-    """Verifica se existe qualquer cliente cadastrado no banco de dados."""
-    logger.debug("Executando query para verificar se há clientes cadastrados.")
+    """Verifica se existe qualquer cliente ATIVO cadastrado."""
+    logger.debug("Executando query para verificar se há clientes ativos.")
     try:
         with get_db_connection() as conn:
-            cursor = conn.execute("SELECT 1 FROM clientes LIMIT 1")
+            cursor = conn.execute("SELECT 1 FROM clientes WHERE ativo = 1 LIMIT 1")
             return cursor.fetchone() is not None
     except sqlite3.Error as e:
         logger.error(f"Erro ao verificar a existência de cliente: {e}", exc_info=True)
         return True
 
 def obter_clientes() -> List[Cliente]:
-    """Retorna uma lista de todos os clientes."""
-    logger.debug("Executando query para obter todos os clientes.")
+    """Retorna uma lista de todos os clientes ATIVOS."""
+    logger.debug("Executando query para obter todos os clientes ativos.")
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM clientes ORDER BY nome")
+            # --- QUERY ATUALIZADA ---
+            # Filtra para retornar apenas clientes com 'ativo = 1'.
+            cursor.execute("SELECT * FROM clientes WHERE ativo = 1 ORDER BY nome")
             return [Cliente(**row) for row in cursor.fetchall()]
     except sqlite3.Error as e:
         logger.error(f"Erro ao obter clientes: {e}", exc_info=True)
@@ -191,34 +187,32 @@ def obter_clientes() -> List[Cliente]:
 
 def obter_cliente_por_id(cliente_id: int) -> Cliente | None:
     """
-    Busca um único cliente ativo pelo seu ID.
-
-    :param cliente_id: O ID do cliente a ser buscado.
-    :return: Um objeto Cliente se encontrado, senão None.
+    Busca um único cliente pelo seu ID, independente de estar ativo ou não.
     """
-    sql = "SELECT id, nome, telefone, endereco, email FROM clientes WHERE id = ? AND ativo = 1"
+    logger.debug(f"Buscando cliente pelo ID: {cliente_id}")
+    sql = "SELECT * FROM clientes WHERE id = ?"
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.row_factory = lambda c, r: Cliente(
-                id=r[0], nome=r[1], telefone=r[2], endereco=r[3], email=r[4]
-            )
             result = cursor.execute(sql, (cliente_id,)).fetchone()
-            return result
+            # Converte o resultado (que é uma linha de banco de dados) em um objeto Cliente.
+            return Cliente(**result) if result else None
     except Exception as e:
         logging.error(f"Erro ao obter cliente por ID {cliente_id}: {e}")
         return None
 
 def buscar_clientes_por_termo(termo: str) -> List[Cliente]:
-    """Busca clientes no banco de dados por nome, telefone ou placa do carro."""
-    logger.debug(f"Executando busca de clientes pelo termo: '{termo}'")
+    """Busca clientes ATIVOS no banco de dados por nome, telefone ou placa do carro."""
+    logger.debug(f"Executando busca de clientes ativos pelo termo: '{termo}'")
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
+            # --- QUERY ATUALIZADA ---
+            # Adicionada a condição 'c.ativo = 1' para filtrar a busca.
             query = """
                 SELECT DISTINCT c.id, c.nome, c.telefone, c.endereco, c.email
                 FROM clientes c LEFT JOIN carros car ON c.id = car.cliente_id
-                WHERE c.nome LIKE ? OR c.telefone LIKE ? OR car.placa LIKE ?
+                WHERE (c.nome LIKE ? OR c.telefone LIKE ? OR car.placa LIKE ?) AND c.ativo = 1
             """
             like_termo = f"%{termo}%"
             cursor.execute(query, (like_termo, like_termo, like_termo))
@@ -227,14 +221,9 @@ def buscar_clientes_por_termo(termo: str) -> List[Cliente]:
         logger.error(f"Erro ao buscar clientes por termo: {e}", exc_info=True)
         return []
 
-# --- NOVA FUNÇÃO ---
 def atualizar_cliente(cliente_id: int, novos_dados: dict) -> bool:
     """
     Atualiza os dados de um cliente específico no banco de dados.
-    
-    :param cliente_id: O ID do cliente a ser atualizado.
-    :param novos_dados: Um dicionário com os novos dados do cliente.
-    :return: True se a atualização foi bem-sucedida, False caso contrário.
     """
     logger.info(f"Executando query para atualizar cliente ID: {cliente_id}")
     try:
@@ -251,51 +240,48 @@ def atualizar_cliente(cliente_id: int, novos_dados: dict) -> bool:
                 )
             )
             conn.commit()
-            # Retorna True se a operação afetou pelo menos uma linha.
             return cursor.rowcount > 0
     except sqlite3.Error as e:
         logger.error(f"Erro ao atualizar cliente ID {cliente_id}: {e}", exc_info=True)
         return False
 
 
-def obter_carros_por_cliente(cliente_id: int) -> List[Carro]:
-    """Retorna uma lista de carros de um cliente específico."""
-    logger.debug(f"Executando query para obter carros do cliente ID: {cliente_id}")
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM carros WHERE cliente_id = ?", (cliente_id,))
-            return [Carro(**row) for row in cursor.fetchall()]
-    except sqlite3.Error as e:
-        logger.error(f"Erro ao obter carros do cliente {cliente_id}: {e}", exc_info=True)
-        return []
-
-def obter_clientes_por_termo(termo: str) -> List[Cliente]:
-    """Busca clientes na base de dados. Retorna uma lista de objetos `Cliente`."""
+def desativar_cliente_por_id(cliente_id: int) -> bool:
+    """
+    Realiza a exclusão lógica de um cliente, setando seu status para 'ativo = 0'.
     
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT DISTINCT c.id, c.nome, c.telefone, c.endereco, c.email
-                FROM clientes c LEFT JOIN carros car ON c.id = car.cliente_id
-                WHERE c.nome LIKE ? OR c.telefone LIKE ? OR car.placa LIKE ?
-                """,
-                (f"%{termo}%", f"%{termo}%", f"%{termo}%"),
-            )
-    return [Cliente(**row) for row in cursor.fetchall()]
-
-
-    """Retorna uma lista de todos os clientes."""
-    logger.debug("Executando query para obter todos os clientes.")
+    :param cliente_id: O ID do cliente a ser desativado.
+    :return: True se a operação foi bem-sucedida, False caso contrário.
+    """
+    logger.info(f"Executando query para desativar cliente ID: {cliente_id}")
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM clientes ORDER BY nome")
-            return [Cliente(**row) for row in cursor.fetchall()]
+            # Executa o UPDATE para marcar o cliente como inativo.
+            cursor.execute("UPDATE clientes SET ativo = 0 WHERE id = ?", (cliente_id,))
+            conn.commit()
+            # Retorna True se a operação afetou pelo menos uma linha.
+            return cursor.rowcount > 0
     except sqlite3.Error as e:
-        logger.error(f"Erro ao obter clientes: {e}", exc_info=True)
-        return []
+        logger.error(f"Erro ao desativar cliente ID {cliente_id}: {e}", exc_info=True)
+        return False
+
+# --- FUNÇÕES DE CARRO ---
+def criar_carro(modelo: str, ano: int, cor: str, placa: str, cliente_id: int) -> Carro | None:
+    """Insere um novo carro no banco de dados."""
+    logger.info(f"Executando query para criar carro: {modelo} - Placa: {placa}")
+    sql = "INSERT INTO carros (modelo, ano, cor, placa, cliente_id) VALUES (?, ?, ?, ?, ?)"
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, (modelo, ano, cor, placa, cliente_id))
+            novo_id = cursor.lastrowid
+            conn.commit()
+            logger.info(f"Carro '{modelo}' com placa '{placa}' criado com sucesso com o ID: {novo_id}.")
+            return Carro(id=novo_id, modelo=modelo, ano=ano, cor=cor, placa=placa, cliente_id=cliente_id)
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao criar carro '{modelo}' com placa '{placa}': {e}", exc_info=True)
+        return None
 
 def obter_carros_por_cliente_id(cliente_id: int) -> List[Carro]:
     """Busca os carros de um cliente pelo ID. Retorna uma lista de objetos `Carro`."""
@@ -307,7 +293,7 @@ def obter_carros_por_cliente_id(cliente_id: int) -> List[Carro]:
         )
     return [Carro(**row) for row in cursor.fetchall()]
 
-
+def obter_carros_por_cliente(cliente_id: int) -> List[Carro]:
     """Retorna uma lista de carros de um cliente específico."""
     logger.debug(f"Executando query para obter carros do cliente ID: {cliente_id}")
     try:
@@ -333,6 +319,7 @@ def atualizar_carro(carro_id: int, cliente_id: int) -> bool:
     except sqlite3.Error as e:
         logger.error(f"Erro ao atualizar o carro no banco de dados: {e}", exc_info=True)
         return False
+
 
 # =================================================================================
 # QUERIES DE PEÇAS E ESTOQUE

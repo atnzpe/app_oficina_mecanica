@@ -11,7 +11,7 @@ from src.models.models import Cliente
 from typing import List
 # Importa as classes de estilo para fontes e dimensões.
 from src.styles.style import AppDimensions, AppFonts
-
+import logging
 
 class GerirClientesView(ft.Column):
     """
@@ -30,9 +30,13 @@ class GerirClientesView(ft.Column):
         self.view_model = GerirClientesViewModel(page)
         self.view_model.vincular_view(self)
 
-        # --- Componentes Visuais ---
+        # --- CORREÇÃO DO ERRO ---
+        # O evento on_mount é atribuído aqui. Ele será chamado pelo Flet
+        # assim que o controle for adicionado à página, garantindo que
+        # `self.update()` possa ser chamado com segurança.
+        self.on_mount = self.did_mount
 
-        # Campo de texto para pesquisar clientes.
+        # --- Componentes Visuais ---
         self._campo_pesquisa = ft.TextField(
             label="Pesquisar por Nome, Telefone ou Placa",
             # A ação de submissão (Enter) aciona o método de pesquisa no ViewModel.
@@ -53,7 +57,17 @@ class GerirClientesView(ft.Column):
             self._resultados_pesquisa_listview,
         ]
 
-        # Comanda o ViewModel a carregar a lista inicial de clientes assim que a tela é criada.
+        # A chamada para carregar os dados foi REMOVIDA daqui para evitar o erro.
+        # self.view_model.carregar_clientes_iniciais()
+
+    def did_mount(self):
+        """
+        Este método é chamado pelo evento on_mount. É o local seguro para
+        iniciar o carregamento de dados que atualizam a UI.
+        """
+        # Log para indicar que o método foi chamado.
+        logging.info("GerirClientesView foi montada. Carregando clientes...")
+        # Comanda o ViewModel a carregar a lista inicial de clientes.
         self.view_model.carregar_clientes_iniciais()
 
     def atualizar_lista_resultados(self, clientes: List[Cliente]):
@@ -81,7 +95,7 @@ class GerirClientesView(ft.Column):
                             c.id),
                     )
                 )
-        # Atualiza a interface gráfica para exibir as mudanças.
+        # Este update agora é seguro, pois é chamado depois que a view foi montada.
         self.update()
 
 
@@ -101,6 +115,18 @@ def GerirClientesViewFactory(page: ft.Page) -> ft.View:
                 tooltip="Voltar ao Dashboard"
             ),
             bgcolor=page.theme.color_scheme.surface,
+        ),
+        # --- NOVO FloatingActionButton ---
+        # Adiciona um botão flutuante para criar um novo cliente, melhorando a UX.
+        floating_action_button=ft.FloatingActionButton(
+            icon=ft.Icons.ADD,
+            tooltip="Cadastrar Novo Cliente",
+            on_click=lambda _: page.go("/cadastro_cliente")
+        ),
+        floating_action_button2=ft.FloatingActionButton(
+            icon=ft.Icons.ADD,
+            tooltip="Voltar ao Dashboard",
+            on_click=lambda _: page.go("/dashboard")
         ),
         controls=[
             # Envolve o conteúdo com SafeArea e um Container para aplicar padding.

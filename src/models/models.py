@@ -36,12 +36,21 @@ class Usuario:
 class Cliente:
     """Representa um cliente da oficina."""
 
-    def __init__(self, id: int, nome: str, telefone: str, endereco: str, email: str):
+    # --- CONSTRUTOR ATUALIZADO ---
+    # Adicionado o atributo `ativo`, que será usado para exclusão lógica.
+    def __init__(self, id: int, nome: str, telefone: str, endereco: str, email: str, ativo: bool = True):
+        # ID único do cliente no banco de dados.
         self.id: int = id
+        # Nome completo do cliente.
         self.nome: str = nome
+        # Número de telefone para contato.
         self.telefone: str = telefone
+        # Endereço físico do cliente.
         self.endereco: str = endereco
+        # Endereço de e-mail do cliente.
         self.email: str = email
+        # Flag para indicar se o cliente está ativo (1) ou desativado (0).
+        self.ativo: bool = ativo
 
 
 class Carro:

@@ -144,7 +144,8 @@ CREATE_TABLES_SQL = [
         nome TEXT NOT NULL,
         telefone TEXT,
         endereco TEXT,
-        email TEXT
+        email TEXT,
+        ativo BOOLEAN DEFAULT 1
     );
     """,
     # --- (As outras tabelas - carros, pecas, etc. - permanecem as mesmas) ---
