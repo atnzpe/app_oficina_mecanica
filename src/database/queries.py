@@ -189,6 +189,26 @@ def obter_clientes() -> List[Cliente]:
         logger.error(f"Erro ao obter clientes: {e}", exc_info=True)
         return []
 
+def obter_cliente_por_id(cliente_id: int) -> Cliente | None:
+    """
+    Busca um único cliente ativo pelo seu ID.
+
+    :param cliente_id: O ID do cliente a ser buscado.
+    :return: Um objeto Cliente se encontrado, senão None.
+    """
+    sql = "SELECT id, nome, telefone, endereco, email FROM clientes WHERE id = ? AND ativo = 1"
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.row_factory = lambda c, r: Cliente(
+                id=r[0], nome=r[1], telefone=r[2], endereco=r[3], email=r[4]
+            )
+            result = cursor.execute(sql, (cliente_id,)).fetchone()
+            return result
+    except Exception as e:
+        logging.error(f"Erro ao obter cliente por ID {cliente_id}: {e}")
+        return None
+
 def buscar_clientes_por_termo(termo: str) -> List[Cliente]:
     """Busca clientes no banco de dados por nome, telefone ou placa do carro."""
     logger.debug(f"Executando busca de clientes pelo termo: '{termo}'")

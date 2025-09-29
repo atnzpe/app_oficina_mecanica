@@ -117,19 +117,19 @@ class RegisterView(ft.Column):
 
 # --- FACTORY DA VIEW ---
 def RegisterViewFactory(page: ft.Page) -> ft.View:
-    """
-    Cria a View completa de Registro para o roteador.
-    """
-    # 1. Cria o conteúdo da página de registro.
+    """Cria a View completa de Registro para o roteador."""
     view_content = RegisterView(page)
 
-    # 2. Retorna o objeto ft.View.
     return ft.View(
         route="/register",
         vertical_alignment=ft.MainAxisAlignment.CENTER,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
-            view_content
+            # --- SAFEAREA APLICADO ---
+            ft.SafeArea(
+                content=view_content,
+                expand=True
+            )
         ],
-        padding=10
+        padding=0
     )

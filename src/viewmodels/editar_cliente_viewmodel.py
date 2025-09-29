@@ -1,91 +1,75 @@
-# -*- coding: utf-8 -*-
 
 # =================================================================================
 # MÓDULO DO VIEWMODEL DE EDIÇÃO DE CLIENTE (editar_cliente_viewmodel.py)
 #
-# OBJETIVO: Conter a lógica de negócio e o estado do componente de edição de
-#           clientes. Ele busca dados, gere o estado do formulário e
-#           comanda a View para se atualizar.
-#
-# SEÇÕES ALTERADAS NESTA REATORAÇÃO (ISSUE #1):
-#   - Este é um ficheiro completamente novo, criado para separar a lógica
-#     da apresentação, seguindo o padrão MVVM.
-#
-# SEÇÕES SEM ALTERAÇÃO:
-#   - A lógica de base de dados (queries SQL) foi movida para aqui a partir do
-#     antigo ficheiro `editar_cliente.py` sem alterações funcionais.
+# REATORAÇÃO (CRUD):
+#   - O ViewModel agora é inicializado com um `cliente_id` vindo da rota.
+#   - Adicionado método `carregar_dados_cliente` para buscar os dados e
+#     comandar a View a preencher o formulário.
+#   - Ações de sucesso (salvar, desativar) agora navegam de volta para a lista.
 # =================================================================================
-import logging
-from typing import List
 import flet as ft
-
-from src.models.models import Cliente, Carro
+import logging
 from src.database import queries
-
+from src.models.models import Cliente # Supondo que o modelo seja importado
 
 class EditarClienteViewModel:
     """
-    O ViewModel para a EditarClienteView. Contém o estado e a lógica da funcionalidade.
+    O ViewModel para a tela de edição de um cliente específico.
     """
-
-    def __init__(self, page: ft.Page):
+    def __init__(self, page: ft.Page, cliente_id: int):
         """
         Construtor do ViewModel.
-        :param page: A referência à página principal do Flet para controlo de modais.
+        :param page: A referência à página principal do Flet.
+        :param cliente_id: O ID do cliente a ser editado, vindo da URL.
         """
         self.page = page
-        # Estabelece uma conexão com a base de dados.
-
-        # Estado: armazena o cliente que está a ser editado no momento.
+        self.cliente_id = cliente_id
+        self._view: 'EditarClienteView' | None = None
+        # O estado `cliente_em_edicao` pode ser útil se precisarmos do objeto completo.
         self.cliente_em_edicao: Cliente | None = None
-        # Referência à View que este ViewModel controla.
-        self._view: "EditarClienteView" | None = None
 
-    def vincular_view(self, view: "EditarClienteView"):
+    def vincular_view(self, view: 'EditarClienteView'):
         """Estabelece a conexão de duas vias entre o ViewModel e a View."""
         self._view = view
 
-    # --- MÉTODOS DE LÓGICA DE NEGÓCIO ---
-
-    
-
-    def pesquisar_cliente(self, termo: str):
-        """Busca clientes na base de dados e comanda a View para exibir os resultados."""
-        logging.info(f"ViewModel: a pesquisar por %s'{termo}'")
-        clientes_encontrados = queries.obter_clientes_por_termo(termo)
-        # Comanda a View para atualizar a sua lista de resultados.
-        if self._view:
-            self._view.atualizar_lista_resultados(clientes_encontrados)
-
-    
-
-    def selecionar_cliente_para_edicao(self, cliente: Cliente):
-        """Prepara o estado para a edição de um cliente específico."""
-        logging.info(f"ViewModel: selecionado cliente '{cliente.nome}' para edição.")
-        self.cliente_em_edicao = cliente
-        carros_do_cliente = queries.obter_carros_por_cliente_id(cliente.id)
-        # Comanda a View para abrir o modal de edição e o preenche com os dados.
-        if self._view:
-            self._view.abrir_modal_edicao(cliente, carros_do_cliente)
-
-    
+    def carregar_dados_cliente(self):
+        """Busca os dados do cliente no DB e comanda a View para preencher o form."""
+        logging.info(f"ViewModel: buscando dados para o cliente ID {self.cliente_id}")
+        cliente = queries.obter_cliente_por_id(self.cliente_id)
+        if cliente and self._view:
+            self.cliente_em_edicao = cliente # Armazena o objeto cliente no estado do ViewModel
+            self._view.preencher_formulario(cliente)
+        elif self._view:
+            # Caso o cliente não seja encontrado (ex: URL inválida), mostra um erro e oferece para voltar.
+            self._view.mostrar_feedback("Cliente não encontrado.", False)
+            # Poderia adicionar um botão de "Voltar" na view em caso de erro.
 
     def salvar_alteracoes(self, novos_dados: dict):
-        """Salva as alterações do cliente no banco de dados."""
-        if not self.cliente_em_edicao:
-            logging.warning("ViewModel: Tentativa de salvar sem um cliente em modo de edição.")
-            return
-
-        cliente_id = self.cliente_em_edicao.id
-        logging.info(f"ViewModel: Salvando alterações para o cliente ID: {cliente_id}")
-        # --- CHAMADA CORRIGIDA (sem passar a conexão) ---
-        sucesso = queries.atualizar_cliente(cliente_id, novos_dados)
-        
+        """Salva as alterações e navega de volta para a lista de gerenciamento."""
+        logging.info(f"ViewModel: salvando alterações para o cliente ID {self.cliente_id}")
+        sucesso = queries.atualizar_cliente(self.cliente_id, novos_dados)
         if self._view:
-            self._view.fechar_todos_os_modais()
             if sucesso:
-                self._view.mostrar_feedback("Cliente atualizado com sucesso!", success=True)
+                self._view.mostrar_feedback("Cliente atualizado com sucesso!", True)
+                self.page.go("/gerir_clientes") # Navega de volta para a lista
             else:
-                self._view.mostrar_feedback("Erro ao salvar alterações.", success=False)
-        
-        self.cliente_em_edicao = None
+                self._view.mostrar_feedback("Erro ao salvar alterações.", False)
+
+    def solicitar_desativacao_cliente(self):
+        """Comanda a View para abrir o diálogo de confirmação."""
+        logging.info(f"ViewModel: Solicitação de desativação para o cliente ID {self.cliente_id}.")
+        if self._view:
+            self._view.abrir_modal_confirmacao_desativar()
+
+    def confirmar_desativacao_cliente(self, e):
+        """Desativa o cliente e navega de volta para a lista de gerenciamento."""
+        logging.info(f"ViewModel: Confirmado! Desativando cliente ID: {self.cliente_id}")
+        sucesso = queries.desativar_cliente_por_id(self.cliente_id)
+        if self._view:
+            self._view.fechar_todos_os_modais() # Fecha o diálogo de confirmação
+            if sucesso:
+                self._view.mostrar_feedback("Cliente desativado com sucesso!", True)
+                self.page.go("/gerir_clientes") # Navega de volta para a lista
+            else:
+                self._view.mostrar_feedback("Erro ao desativar o cliente.", False)

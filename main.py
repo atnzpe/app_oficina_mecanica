@@ -1,21 +1,31 @@
+# Local do Arquivo: main.py
 
+# -*- coding: utf-8 -*-
 # =================================================================================
-# MÓDULO DE ENTRADA DA APLICAÇÃO (main.py) - VERSÃO 3.4
+# MÓDULO DE ENTRADA DA APLICAÇÃO (main.py)
 #
 # ATUALIZAÇÃO:
-#   - Adicionada a rota '/onboarding' para a tela de configuração da oficina.
+#   - Integração do módulo de estilos. Os temas claro e escuro agora são
+#     carregados a partir de `src/styles/style.py` para uma UI consistente.
+#   - Corrigida a aplicação de `extended_colors` para o tema.
 # =================================================================================
 import flet as ft
 import threading
 import logging
+import re
+
+# --- IMPORTAÇÃO DOS TEMAS E CORES PERSONALIZADAS ---
+from src.styles.style import AppThemes, success_color_scheme
 
 # Importações das View Factories
 from src.views.login_view import LoginViewFactory
 from src.views.dashboard_view import DashboardViewFactory
 from src.views.register_view import RegisterViewFactory
+from src.views.onboarding_view import OnboardingViewFactory
 from src.views.cadastro_cliente_view import CadastroClienteViewFactory
 from src.views.onboarding_cliente_view import OnboardingClienteViewFactory
-from src.views.onboarding_view import OnboardingViewFactory
+from src.views.gerir_clientes_view import GerirClientesViewFactory
+from src.views.editar_cliente_view import EditarClienteViewFactory
 
 # Importações de Serviços e Banco de Dados
 from src.services.task_queue_service import processar_fila_db
@@ -25,12 +35,34 @@ from utils import criar_pastas
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - [%(filename)s] - %(message)s')
 
+# --- Factory Genérica para Telas em Desenvolvimento ---
+def PlaceholderViewFactory(page: ft.Page, title: str) -> ft.View:
+    return ft.View(
+        route=page.route,
+        appbar=ft.AppBar(title=ft.Text(title), bgcolor=page.theme.color_scheme.surface_variant),
+        controls=[ft.SafeArea(ft.Text(f"Tela de {title} em construção.", size=20))],
+        vertical_alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        padding=0
+    )
+
 def main(page: ft.Page):
     """
     Função principal que inicializa e configura a aplicação Flet.
     """
-    page.title = "Sistema OS Oficina Mecânica - v3.4"
-    page.theme_mode = ft.ThemeMode.DARK
+    page.title = "Sistema OS Oficina Mecânica"
+    
+    # --- APLICAÇÃO DOS TEMAS GLOBAIS ---
+    page.theme = AppThemes.light_theme
+    page.dark_theme = AppThemes.dark_theme
+
+    # --- CORREÇÃO: Aplica as cores estendidas DEPOIS de definir os temas ---
+    page.theme.extended_colors = [success_color_scheme]
+    page.dark_theme.extended_colors = [success_color_scheme]
+    
+    # Define o tema inicial como escuro
+    page.theme_mode = ft.ThemeMode.DARK 
+    
     page.window_maximizable = True
     page.window_maximized = True
 
@@ -43,8 +75,8 @@ def main(page: ft.Page):
 
     # --- GERENCIADOR DE ROTAS ---
     def route_change(route):
-        """Renderiza a View correta com base na rota atual da página."""
         logging.info(f"Navegando para a rota: {page.route}")
+        edit_cliente_route = re.match(r"/editar_cliente/(\d+)", page.route)
         page.views.clear()
 
         # Mapeamento de rotas para as View Factories
@@ -52,15 +84,55 @@ def main(page: ft.Page):
             page.views.append(LoginViewFactory(page))
         elif page.route == "/register":
             page.views.append(RegisterViewFactory(page))
-        # --- NOVA ROTA DE ONBOARDING DA OFICINA ---
         elif page.route == "/onboarding":
             page.views.append(OnboardingViewFactory(page))
         elif page.route == "/dashboard":
             page.views.append(DashboardViewFactory(page))
+        
+        # --- Rotas de Cadastro ---
+        elif page.route == "/gerir_clientes":
+            page.views.append(GerirClientesViewFactory(page))
         elif page.route == "/cadastro_cliente":
             page.views.append(CadastroClienteViewFactory(page))
-        elif page.route == "/onboarding_cliente":
-            page.views.append(OnboardingClienteViewFactory(page))
+        elif edit_cliente_route:
+            cliente_id = int(edit_cliente_route.group(1))
+            page.views.append(EditarClienteViewFactory(page, cliente_id=cliente_id))
+        elif page.route == "/gerir_veiculos":
+            page.views.append(PlaceholderViewFactory(page, "Gerenciar Veículos"))
+        elif page.route == "/gerir_pecas":
+            page.views.append(PlaceholderViewFactory(page, "Gerenciar Peças"))
+        elif page.route == "/gerir_servicos":
+            page.views.append(PlaceholderViewFactory(page, "Gerenciar Serviços"))
+        elif page.route == "/gerir_mecanicos":
+            page.views.append(PlaceholderViewFactory(page, "Gerenciar Mecânicos"))
+            
+        # --- Rotas de Serviços ---
+        elif page.route == "/nova_os":
+            page.views.append(PlaceholderViewFactory(page, "Nova Ordem de Serviço"))
+        elif page.route == "/novo_orcamento":
+            page.views.append(PlaceholderViewFactory(page, "Novo Orçamento"))
+        elif page.route == "/venda_pecas":
+            page.views.append(PlaceholderViewFactory(page, "Venda de Peças"))
+
+        # --- Rotas de Consultas e Relatórios ---
+        elif page.route == "/entrada_pecas":
+            page.views.append(PlaceholderViewFactory(page, "Entrada de Peças"))
+        elif page.route == "/estoque":
+            page.views.append(PlaceholderViewFactory(page, "Estoque"))
+        elif page.route == "/relatorios":
+            page.views.append(PlaceholderViewFactory(page, "Relatórios"))
+        
+        # --- Rotas Administrativas ---
+        elif page.route == "/minha_conta":
+            page.views.append(PlaceholderViewFactory(page, "Minha Conta"))
+        elif page.route == "/usuarios":
+            page.views.append(PlaceholderViewFactory(page, "Gerenciar Usuários"))
+        elif page.route == "/dados_oficina":
+            page.views.append(PlaceholderViewFactory(page, "Dados da Oficina"))
+
+        else:
+            # Rota de fallback caso nenhuma corresponda
+            page.views.append(DashboardViewFactory(page))
         
         page.update()
 
