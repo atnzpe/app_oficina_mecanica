@@ -1,15 +1,15 @@
-
-from src.models.models import Cliente
-from src.database import queries
-import logging
-import flet as ft
-== == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == =
+# =================================================================================
 # MÓDULO DO VIEWMODEL DE EDIÇÃO DE CLIENTE (editar_cliente_viewmodel.py)
 #
 # ATUALIZAÇÃO (CRUD Cliente):
 #   - Adicionada a lógica completa para ATIVAR um cliente, incluindo
 #     solicitação de confirmação e chamada à nova query.
 # =================================================================================
+import flet as ft
+import logging
+from src.database import queries
+from src.models.models import Cliente 
+
 
 
 class EditarClienteViewModel:
