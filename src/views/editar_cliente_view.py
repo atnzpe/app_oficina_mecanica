@@ -1,3 +1,31 @@
+from src.styles.style import AppDimensions, AppFonts
+from src.models.models import Cliente
+from src.viewmodels.editar_cliente_viewmodel import EditarClienteViewModel
+import flet as ft
+Com certeza! Continuamos o processo de refatoração, garantindo uma interface coesa e de fácil manutenção.
+
+Os próximos dois arquivos que vamos padronizar são a tela de edição de cliente, que é a continuação natural do CRUD de clientes, e a tela de Ordem de Serviço, que é uma das mais complexas e importantes.
+
+PROPOSTA DE ATUALIZAÇÃO(1/2)
+1. MENSAGEM DE COMMIT
+feat(ui): Aplica style.py à EditarClienteView para consistência no CRUD
+
+Refatora a `editar_cliente_view.py` para utilizar as constantes de design globais(`AppFonts`, `AppDimensions`) de `src/styles/style.py`. Esta alteração garante que o formulário de edição de cliente seja visualmente consistente com as telas de listagem e cadastro.
+
+- Padroniza os campos de texto e botões com as dimensões e raios de borda do design system.
+- Aplica a escala de fontes padronizada para o título da página e outros elementos textuais.
+- Melhora a legibilidade e a manutenibilidade do código da view.
+2. ANÁLISE DA SOLICITAÇÃO
+A tarefa é aplicar nosso design system centralizado em style.py à tela de edição de clientes(src/views/editar_cliente_view.py). O objetivo é substituir os valores estáticos por constantes, garantindo que a experiência do usuário ao editar um cliente seja coesa com o resto da aplicação.
+
+As modificações serão focadas exclusivamente na camada View:
+
+View(src/views/editar_cliente_view.py): O arquivo será alterado para importar AppFonts e AppDimensions. As propriedades dos componentes visuais(TextField, ElevatedButton, Text) serão atualizadas para usar as constantes do style.py. Adicionarei comentários detalhados a cada linha.
+
+3. ARQUIVOS MODIFICADOS/CRIADOS
+(View: src/views/editar_cliente_view.py)
+
+Python
 
 # =================================================================================
 # MÓDULO DA VIEW DE EDIÇÃO DE CLIENTE (editar_cliente_view.py)
@@ -5,18 +33,21 @@
 # REATORAÇÃO (CRUD):
 #   - A View foi transformada em uma tela completa, controlada pela rota
 #     /editar_cliente/:id, substituindo o antigo sistema de modais.
+#   - Integrado o `style.py` para padronização da UI.
 # =================================================================================
-import flet as ft
-from src.viewmodels.editar_cliente_viewmodel import EditarClienteViewModel
-from src.models.models import Cliente
-from src.styles.style import AppDimensions
+# Importa as classes de estilo para fontes e dimensões.
+
 
 class EditarClienteView(ft.Column):
     """
     A View para o formulário de edição de clientes como uma página completa.
     """
+
     def __init__(self, page: ft.Page, cliente_id: int):
+        # Chama o construtor da classe pai (ft.Column).
         super().__init__()
+
+        # Armazena referências da página e instancia o ViewModel.
         self.page = page
         self.view_model = EditarClienteViewModel(page, cliente_id)
         self.view_model.vincular_view(self)
@@ -26,30 +57,43 @@ class EditarClienteView(ft.Column):
         self.alignment = ft.MainAxisAlignment.CENTER
         self.spacing = 15
 
-        self._campo_nome = ft.TextField(label="Nome", width=AppDimensions.FIELD_WIDTH, border_radius=AppDimensions.BORDER_RADIUS)
-        self._campo_telefone = ft.TextField(label="Telefone", width=AppDimensions.FIELD_WIDTH, border_radius=AppDimensions.BORDER_RADIUS)
-        self._campo_endereco = ft.TextField(label="Endereço", width=AppDimensions.FIELD_WIDTH, border_radius=AppDimensions.BORDER_RADIUS)
-        self._campo_email = ft.TextField(label="Email", width=AppDimensions.FIELD_WIDTH, border_radius=AppDimensions.BORDER_RADIUS)
+        # Campos de texto padronizados com as dimensões e raios de borda do style.py.
+        self._campo_nome = ft.TextField(label="Nome", width=AppDimensions.FIELD_WIDTH,
+                                        border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS))
+        self._campo_telefone = ft.TextField(
+            label="Telefone", width=AppDimensions.FIELD_WIDTH, border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS))
+        self._campo_endereco = ft.TextField(
+            label="Endereço", width=AppDimensions.FIELD_WIDTH, border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS))
+        self._campo_email = ft.TextField(label="Email", width=AppDimensions.FIELD_WIDTH,
+                                         border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS))
 
+        # Botão para desativar o cliente.
         self._desativar_btn = ft.ElevatedButton(
             "Desativar Cliente",
             icon=ft.Icons.DELETE_FOREVER,
-            color=ft.Colors.WHITE,
-            bgcolor=ft.Colors.RED_700,
+            # Cores devem ser obtidas do tema para garantir contraste.
+            color=self.page.theme.color_scheme.on_error,
+            bgcolor=self.page.theme.color_scheme.error,
             on_click=lambda _: self.view_model.solicitar_desativacao_cliente()
         )
-        self._salvar_btn = ft.ElevatedButton("Salvar Alterações", icon=ft.Icons.SAVE, on_click=self._on_salvar_click)
-        
+
+        # Botão para salvar as alterações.
+        self._salvar_btn = ft.ElevatedButton(
+            "Salvar Alterações", icon=ft.Icons.SAVE, on_click=self._on_salvar_click)
+
+        # Diálogo de confirmação para a ação de desativar.
         self._dlg_confirmar_desativacao = ft.AlertDialog(
             modal=True,
             title=ft.Text("Confirmar Ação"),
-            content=ft.Text("Tem certeza de que deseja desativar este cliente? Esta ação o removerá das listas ativas."),
+            content=ft.Text(
+                "Tem certeza de que deseja desativar este cliente? Esta ação o removerá das listas ativas."),
             actions=[
-                ft.TextButton("Cancelar", on_click=self.fechar_todos_os_modais),
+                ft.TextButton(
+                    "Cancelar", on_click=self.fechar_todos_os_modais),
                 ft.ElevatedButton(
-                    "Sim, Desativar", 
+                    "Sim, Desativar",
                     on_click=self.view_model.confirmar_desativacao_cliente,
-                    bgcolor=ft.Colors.RED_700
+                    bgcolor=self.page.theme.color_scheme.error
                 ),
             ],
             actions_alignment=ft.MainAxisAlignment.END
@@ -57,18 +101,20 @@ class EditarClienteView(ft.Column):
 
         # --- Estrutura da View ---
         self.controls = [
-            ft.Text("Editando Cliente", size=30, weight=ft.FontWeight.BOLD),
+            ft.Text("Editando Cliente", size=AppFonts.TITLE_MEDIUM,
+                    weight=ft.FontWeight.BOLD),
             self._campo_nome,
             self._campo_telefone,
             self._campo_endereco,
             self._campo_email,
+            # Linha para organizar os botões de ação.
             ft.Row(
                 [self._desativar_btn, self._salvar_btn],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 width=AppDimensions.FIELD_WIDTH
             )
         ]
-        
+
         # Comanda o ViewModel para carregar os dados do cliente assim que a view for criada.
         self.view_model.carregar_dados_cliente()
 
@@ -106,10 +152,11 @@ class EditarClienteView(ft.Column):
         """Exibe uma SnackBar para feedback ao usuário."""
         self.page.snack_bar = ft.SnackBar(
             content=ft.Text(mensagem),
-            bgcolor=ft.Colors.GREEN_700 if success else ft.Colors.RED_700
+            bgcolor=self.page.theme.color_scheme.primary if success else self.page.theme.color_scheme.error
         )
         self.page.snack_bar.open = True
         self.page.update()
+
 
 def EditarClienteViewFactory(page: ft.Page, cliente_id: int) -> ft.View:
     """Cria a View completa para a rota /editar_cliente/:id."""
@@ -119,10 +166,11 @@ def EditarClienteViewFactory(page: ft.Page, cliente_id: int) -> ft.View:
             title=ft.Text("Editar Cliente"),
             center_title=True,
             leading=ft.IconButton(
-                icon=ft.Icons.ARROW_BACK,
+                icon=ft.Icons.ARROW_BACK_IOS_NEW,
                 on_click=lambda _: page.go("/gerir_clientes"),
                 tooltip="Voltar para a Lista"
             ),
+            bgcolor=page.theme.color_scheme.surface,
         ),
         controls=[
             ft.Container(
@@ -133,5 +181,5 @@ def EditarClienteViewFactory(page: ft.Page, cliente_id: int) -> ft.View:
         ],
         vertical_alignment=ft.MainAxisAlignment.CENTER,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        padding=20
+        padding=AppDimensions.PAGE_PADDING
     )
