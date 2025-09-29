@@ -1,32 +1,3 @@
-from src.styles.style import AppDimensions, AppFonts
-from src.models.models import Cliente
-from src.viewmodels.editar_cliente_viewmodel import EditarClienteViewModel
-import flet as ft
-Com certeza! Continuamos o processo de refatoração, garantindo uma interface coesa e de fácil manutenção.
-
-Os próximos dois arquivos que vamos padronizar são a tela de edição de cliente, que é a continuação natural do CRUD de clientes, e a tela de Ordem de Serviço, que é uma das mais complexas e importantes.
-
-PROPOSTA DE ATUALIZAÇÃO(1/2)
-1. MENSAGEM DE COMMIT
-feat(ui): Aplica style.py à EditarClienteView para consistência no CRUD
-
-Refatora a `editar_cliente_view.py` para utilizar as constantes de design globais(`AppFonts`, `AppDimensions`) de `src/styles/style.py`. Esta alteração garante que o formulário de edição de cliente seja visualmente consistente com as telas de listagem e cadastro.
-
-- Padroniza os campos de texto e botões com as dimensões e raios de borda do design system.
-- Aplica a escala de fontes padronizada para o título da página e outros elementos textuais.
-- Melhora a legibilidade e a manutenibilidade do código da view.
-2. ANÁLISE DA SOLICITAÇÃO
-A tarefa é aplicar nosso design system centralizado em style.py à tela de edição de clientes(src/views/editar_cliente_view.py). O objetivo é substituir os valores estáticos por constantes, garantindo que a experiência do usuário ao editar um cliente seja coesa com o resto da aplicação.
-
-As modificações serão focadas exclusivamente na camada View:
-
-View(src/views/editar_cliente_view.py): O arquivo será alterado para importar AppFonts e AppDimensions. As propriedades dos componentes visuais(TextField, ElevatedButton, Text) serão atualizadas para usar as constantes do style.py. Adicionarei comentários detalhados a cada linha.
-
-3. ARQUIVOS MODIFICADOS/CRIADOS
-(View: src/views/editar_cliente_view.py)
-
-Python
-
 # =================================================================================
 # MÓDULO DA VIEW DE EDIÇÃO DE CLIENTE (editar_cliente_view.py)
 #
@@ -35,7 +6,11 @@ Python
 #     /editar_cliente/:id, substituindo o antigo sistema de modais.
 #   - Integrado o `style.py` para padronização da UI.
 # =================================================================================
+import flet as ft
+from src.viewmodels.editar_cliente_viewmodel import EditarClienteViewModel
+from src.models.models import Cliente
 # Importa as classes de estilo para fontes e dimensões.
+from src.styles.style import AppDimensions, AppFonts
 
 
 class EditarClienteView(ft.Column):
