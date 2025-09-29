@@ -2,8 +2,10 @@
 # MÓDULO DA VIEW DE GERENCIAMENTO DE CLIENTES (gerir_clientes_view.py)
 #
 # OBJETIVO: Criar a tela para listar e buscar clientes (funcionalidade READ).
-# ATUALIZAÇÃO:
-#   - Integrado o `style.py` para padronização da UI.
+# ATUALIZAÇÃO (UX/Responsividade):
+#   - Removido o botão "Voltar" da AppBar.
+#   - Adicionado um segundo FloatingActionButton (FAB) para a navegação de
+#     "Voltar ao Dashboard", garantindo a visibilidade em dispositivos móveis.
 # =================================================================================
 import flet as ft
 from src.viewmodels.gerir_clientes_viewmodel import GerirClientesViewModel
@@ -12,6 +14,7 @@ from typing import List
 # Importa as classes de estilo para fontes e dimensões.
 from src.styles.style import AppDimensions, AppFonts
 import logging
+
 
 class GerirClientesView(ft.Column):
     """
@@ -30,16 +33,12 @@ class GerirClientesView(ft.Column):
         self.view_model = GerirClientesViewModel(page)
         self.view_model.vincular_view(self)
 
-        # --- CORREÇÃO DO ERRO ---
-        # O evento on_mount é atribuído aqui. Ele será chamado pelo Flet
-        # assim que o controle for adicionado à página, garantindo que
-        # `self.update()` possa ser chamado com segurança.
+        # O evento on_mount é atribuído para carregar os dados de forma segura.
         self.on_mount = self.did_mount
 
         # --- Componentes Visuais ---
         self._campo_pesquisa = ft.TextField(
             label="Pesquisar por Nome, Telefone ou Placa",
-            # A ação de submissão (Enter) aciona o método de pesquisa no ViewModel.
             on_submit=lambda e: self.view_model.pesquisar_cliente(
                 self._campo_pesquisa.value),
             prefix_icon=ft.Icons.SEARCH,
@@ -57,15 +56,11 @@ class GerirClientesView(ft.Column):
             self._resultados_pesquisa_listview,
         ]
 
-        # A chamada para carregar os dados foi REMOVIDA daqui para evitar o erro.
-        # self.view_model.carregar_clientes_iniciais()
-
     def did_mount(self):
         """
         Este método é chamado pelo evento on_mount. É o local seguro para
         iniciar o carregamento de dados que atualizam a UI.
         """
-        # Log para indicar que o método foi chamado.
         logging.info("GerirClientesView foi montada. Carregando clientes...")
         # Comanda o ViewModel a carregar a lista inicial de clientes.
         self.view_model.carregar_clientes_iniciais()
@@ -108,25 +103,29 @@ def GerirClientesViewFactory(page: ft.Page) -> ft.View:
         appbar=ft.AppBar(
             title=ft.Text("Gerenciar Clientes"),
             center_title=True,
-            # Botão de voltar para o dashboard.
-            leading=ft.IconButton(
-                icon=ft.Icons.ARROW_BACK_IOS_NEW,
-                on_click=lambda _: page.go("/dashboard"),
-                tooltip="Voltar ao Dashboard"
-            ),
+            # O botão de voltar foi REMOVIDO daqui.
+            leading=None,
+            automatically_imply_leading=False, # Impede o Flet de adicionar um botão de voltar automaticamente
             bgcolor=page.theme.color_scheme.surface,
         ),
-        # --- NOVO FloatingActionButton ---
-        # Adiciona um botão flutuante para criar um novo cliente, melhorando a UX.
-        floating_action_button=ft.FloatingActionButton(
-            icon=ft.Icons.ADD,
-            tooltip="Cadastrar Novo Cliente",
-            on_click=lambda _: page.go("/cadastro_cliente")
-        ),
-        floating_action_button2=ft.FloatingActionButton(
-            icon=ft.Icons.ADD,
-            tooltip="Voltar ao Dashboard",
-            on_click=lambda _: page.go("/dashboard")
+        # --- ALTERAÇÃO PARA RESPONSIVIDADE ---
+        # A propriedade `floating_action_button` agora recebe uma `Row`
+        # contendo os dois botões flutuantes.
+        floating_action_button=ft.Row(
+            [
+                ft.FloatingActionButton(
+                    icon=ft.Icons.ARROW_BACK,
+                    tooltip="Voltar ao Dashboard",
+                    on_click=lambda _: page.go("/dashboard")
+                ),
+                ft.FloatingActionButton(
+                    icon=ft.Icons.ADD,
+                    tooltip="Cadastrar Novo Cliente",
+                    on_click=lambda _: page.go("/cadastro_cliente")
+                )
+            ],
+            # Alinha os botões à direita da tela.
+            alignment=ft.MainAxisAlignment.END,
         ),
         controls=[
             # Envolve o conteúdo com SafeArea e um Container para aplicar padding.

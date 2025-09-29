@@ -3,10 +3,14 @@
 #
 # REATORAÇÃO (CRUD):
 #   - A View foi transformada em uma tela completa, controlada pela rota
-#     /editar_cliente/:id, substituindo o antigo sistema de modais.
+#     /editar_cliente/:id.
 #   - Integrado o `style.py` para padronização da UI.
+#   - CORRIGIDO: Movido o carregamento de dados para o evento `on_mount` para
+#     resolver o `AssertionError` e garantir o pré-preenchimento do formulário.
+#   - MELHORIA: O método `preencher_formulario` agora trata valores nulos.
 # =================================================================================
 import flet as ft
+import logging
 from src.viewmodels.editar_cliente_viewmodel import EditarClienteViewModel
 from src.models.models import Cliente
 # Importa as classes de estilo para fontes e dimensões.
@@ -27,6 +31,11 @@ class EditarClienteView(ft.Column):
         self.view_model = EditarClienteViewModel(page, cliente_id)
         self.view_model.vincular_view(self)
 
+        # --- CORREÇÃO DO ERRO ---
+        # Atribui o método `did_mount` ao evento `on_mount`.
+        # Este evento é disparado pelo Flet quando o controle está pronto na tela.
+        self.on_mount = self.did_mount
+
         # --- Componentes Visuais ---
         self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
         self.alignment = ft.MainAxisAlignment.CENTER
@@ -46,7 +55,6 @@ class EditarClienteView(ft.Column):
         self._desativar_btn = ft.ElevatedButton(
             "Desativar Cliente",
             icon=ft.Icons.DELETE_FOREVER,
-            # Cores devem ser obtidas do tema para garantir contraste.
             color=self.page.theme.color_scheme.on_error,
             bgcolor=self.page.theme.color_scheme.error,
             on_click=lambda _: self.view_model.solicitar_desativacao_cliente()
@@ -82,7 +90,6 @@ class EditarClienteView(ft.Column):
             self._campo_telefone,
             self._campo_endereco,
             self._campo_email,
-            # Linha para organizar os botões de ação.
             ft.Row(
                 [self._desativar_btn, self._salvar_btn],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -90,15 +97,27 @@ class EditarClienteView(ft.Column):
             )
         ]
 
-        # Comanda o ViewModel para carregar os dados do cliente assim que a view for criada.
+    def did_mount(self):
+        """
+        Este método é chamado pelo Flet quando a view é montada.
+        É o local seguro para iniciar o carregamento dos dados do cliente.
+        """
+        logging.info(
+            "EditarClienteView foi montada. Carregando dados do cliente...")
         self.view_model.carregar_dados_cliente()
 
     def preencher_formulario(self, cliente: Cliente):
-        """Preenche os campos do formulário com os dados do cliente."""
-        self._campo_nome.value = cliente.nome
-        self._campo_telefone.value = cliente.telefone
-        self._campo_endereco.value = cliente.endereco
-        self._campo_email.value = cliente.email
+        """
+        Preenche os campos do formulário com os dados do cliente,
+        tratando valores nulos (None) para evitar erros.
+        """
+        # Se o valor for None, ele será convertido para uma string vazia "".
+        self._campo_nome.value = cliente.nome or ""
+        self._campo_telefone.value = cliente.telefone or ""
+        self._campo_endereco.value = cliente.endereco or ""
+        self._campo_email.value = cliente.email or ""
+
+        # Esta chamada de update agora é segura, pois `did_mount` já foi executado.
         self.update()
 
     def _on_salvar_click(self, e):
