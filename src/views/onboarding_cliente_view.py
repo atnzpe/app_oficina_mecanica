@@ -1,15 +1,17 @@
-
 # =================================================================================
 # MÓDULO DA VIEW DE ONBOARDING DE CLIENTE (onboarding_cliente_view.py)
 #
 # OBJETIVO: Criar uma tela de boas-vindas para o primeiro cadastro de cliente.
 # ARQUITETURA: Esta View REUTILIZA o `CadastroClienteViewModel` para evitar
 #              duplicação de código, já que a lógica de salvar é idêntica.
+# ATUALIZAÇÃO:
+#   - Integrado o `style.py` para padronização da UI.
 # =================================================================================
 import flet as ft
 # Reutilizamos o ViewModel já existente, pois a lógica de negócio é a mesma.
 from src.viewmodels.cadastro_cliente_viewmodel import CadastroClienteViewModel
-from src.styles.style import AppDimensions
+# Importa as classes de estilo para fontes e dimensões.
+from src.styles.style import AppDimensions, AppFonts
 
 
 class OnboardingClienteView(ft.Column):
@@ -18,45 +20,76 @@ class OnboardingClienteView(ft.Column):
     """
 
     def __init__(self, page: ft.Page):
+        # Chama o construtor da classe pai (ft.Column).
         super().__init__()
 
+        # Armazena a referência da página principal do Flet.
         self.page = page
+
         # A View de Onboarding usa o mesmo ViewModel da View de Cadastro padrão.
+        # Isso é uma ótima prática para evitar duplicação de lógica (Princípio DRY).
         self.view_model = CadastroClienteViewModel(page)
         self.view_model.vincular_view(self)
 
         # --- Componentes Visuais (idênticos ao de cadastro, mas com textos diferentes) ---
         self._nome_field = ft.TextField(
-            label="Nome do Cliente", width=AppDimensions.FIELD_WIDTH, autofocus=True)
+            label="Nome do Cliente",
+            width=AppDimensions.FIELD_WIDTH,
+            autofocus=True,
+            border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS)
+        )
         self._telefone_field = ft.TextField(
-            label="Telefone", width=AppDimensions.FIELD_WIDTH)
+            label="Telefone",
+            width=AppDimensions.FIELD_WIDTH,
+            border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS),
+            keyboard_type=ft.KeyboardType.PHONE
+        )
         self._endereco_field = ft.TextField(
-            label="Endereço", width=AppDimensions.FIELD_WIDTH)
+            label="Endereço",
+            width=AppDimensions.FIELD_WIDTH,
+            border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS)
+        )
         self._email_field = ft.TextField(
-            label="Email", width=AppDimensions.FIELD_WIDTH)
+            label="Email",
+            width=AppDimensions.FIELD_WIDTH,
+            border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS),
+            keyboard_type=ft.KeyboardType.EMAIL
+        )
 
         # --- Estrutura da Página ---
         self.alignment = ft.MainAxisAlignment.CENTER
         self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
         self.spacing = 20
+        # Lista de controles que compõem esta view.
         self.controls = [
-            ft.Icon(ft.Icons.GROUP_ADD, size=40, color=ft.Colors.PRIMARY),
+            # Ícone para representar visualmente a ação de adicionar um grupo ou cliente.
+            ft.Icon(ft.Icons.GROUP_ADD, size=AppFonts.TITLE_LARGE,
+                    color=self.page.theme.color_scheme.primary),
+            # Título principal da tela.
             ft.Text("Bem-vindo ao Sistema de Oficina!",
-                    size=30, weight=ft.FontWeight.BOLD),
+                    size=AppFonts.TITLE_MEDIUM, weight=ft.FontWeight.BOLD),
+            # Texto instrutivo para guiar o usuário.
             ft.Text(
                 "Parece que você ainda não possui clientes. Vamos cadastrar o primeiro?"),
+            # Divisor invisível para criar um espaçamento vertical.
             ft.Divider(height=15, color=ft.Colors.TRANSPARENT),
             self._nome_field,
             self._telefone_field,
             self._endereco_field,
             self._email_field,
+            # Linha para alinhar o botão de ação.
             ft.Row(
                 [
                     # O botão Salvar delega a ação para o ViewModel reutilizado.
                     ft.ElevatedButton(
-                        "Salvar Cliente e Continuar", on_click=self.view_model.salvar_cliente, icon=ft.Icons.SAVE),
+                        "Salvar Cliente e Continuar",
+                        on_click=self.view_model.salvar_cliente,
+                        icon=ft.Icons.SAVE_AS_OUTLINED
+                    ),
                 ],
-                alignment=ft.MainAxisAlignment.END
+                alignment=ft.MainAxisAlignment.END,
+                # Garante que o alinhamento do botão respeite a largura dos campos.
+                width=AppDimensions.FIELD_WIDTH
             )
         ]
 
@@ -73,7 +106,8 @@ class OnboardingClienteView(ft.Column):
         """Exibe uma SnackBar para feedback ao usuário."""
         self.page.snack_bar = ft.SnackBar(
             content=ft.Text(mensagem),
-            bgcolor=ft.Colors.GREEN_700 if sucesso else ft.Colors.RED_700
+            # As cores de sucesso e erro são obtidas do tema para consistência.
+            bgcolor=self.page.theme.color_scheme.primary if sucesso else self.page.theme.color_scheme.error
         )
         self.page.snack_bar.open = True
         self.page.update()
@@ -93,5 +127,5 @@ def OnboardingClienteViewFactory(page: ft.Page) -> ft.View:
                 expand=True
             )
         ],
-        padding=10
+        padding=AppDimensions.PAGE_PADDING
     )
