@@ -118,26 +118,37 @@ def get_db_connection() -> sqlite3.Connection | None:
 # Lista contendo todos os comandos SQL para criar as tabelas da aplicação.
 # Usar `CREATE TABLE IF NOT EXISTS` garante que o script não falhe se as tabelas já existirem.
 CREATE_TABLES_SQL = [
-    # Tabela de Usuários: armazena credenciais e perfis de acesso.
+    # --- NOVA TABELA ---
+    # Tabela de Estabelecimentos: armazena os dados da oficina.
+    """
+    CREATE TABLE IF NOT EXISTS estabelecimentos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL
+    );
+    """,
+    # Tabela de Usuários: agora com vínculo ao estabelecimento.
     """
     CREATE TABLE IF NOT EXISTS usuarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nome TEXT NOT NULL UNIQUE,
         senha TEXT NOT NULL,
-        perfil TEXT NOT NULL CHECK (perfil IN ('admin', 'mecanico')) DEFAULT 'mecanico'
+        perfil TEXT NOT NULL CHECK (perfil IN ('admin', 'mecanico')) DEFAULT 'mecanico',
+        id_estabelecimento INTEGER,
+        FOREIGN KEY (id_estabelecimento) REFERENCES estabelecimentos(id)
     );
     """,
-    # Tabela de Clientes: informações dos clientes da oficina.
+    # Tabela de Clientes: permanece a mesma, para os clientes da oficina.
     """
     CREATE TABLE IF NOT EXISTS clientes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nome TEXT NOT NULL,
         telefone TEXT,
         endereco TEXT,
-        email TEXT
+        email TEXT,
+        ativo BOOLEAN DEFAULT 1
     );
     """,
-    # Tabela de Carros: veículos associados aos clientes, com chave estrangeira.
+    # --- (As outras tabelas - carros, pecas, etc. - permanecem as mesmas) ---
     """
     CREATE TABLE IF NOT EXISTS carros (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -149,7 +160,6 @@ CREATE_TABLES_SQL = [
         FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
     );
     """,
-    # Tabela de Peças: catálogo de peças e controle de estoque.
     """
     CREATE TABLE IF NOT EXISTS pecas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -162,7 +172,6 @@ CREATE_TABLES_SQL = [
         quantidade_em_estoque INTEGER NOT NULL CHECK (quantidade_em_estoque >= 0)
     );
     """,
-    # Tabela de Ordem de Serviço: o registro principal de cada serviço.
     """
     CREATE TABLE IF NOT EXISTS ordem_servico (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -175,7 +184,6 @@ CREATE_TABLES_SQL = [
         FOREIGN KEY (carro_id) REFERENCES carros(id)
     );
     """,
-    # Tabela de Ligação Pecas-OS: associa múltiplas peças a uma ordem de serviço.
     """
     CREATE TABLE IF NOT EXISTS PecasOrdemServico (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -186,7 +194,6 @@ CREATE_TABLES_SQL = [
         FOREIGN KEY (peca_id) REFERENCES pecas(id)
     );
     """,
-    # Tabela de Movimentação de Peças: rastreia entradas e saídas do estoque.
     """
     CREATE TABLE IF NOT EXISTS movimentacao_pecas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -198,7 +205,7 @@ CREATE_TABLES_SQL = [
         FOREIGN KEY (peca_id) REFERENCES pecas(id),
         FOREIGN KEY (ordem_servico_id) REFERENCES ordem_servico(id)
     );
-    """,
+    """
 ]
 
 # --- FUNÇÃO DE INICIALIZAÇÃO DO BANCO DE DADOS ---

@@ -1,24 +1,31 @@
-# -*- coding: utf-8 -*-
+# Local do Arquivo: main.py
 
+# -*- coding: utf-8 -*-
 # =================================================================================
-# MÓDULO DE ENTRADA DA APLICAÇÃO (main.py) - VERSÃO 3.1
-#
-# OBJETIVO: Atuar como o roteador central da aplicação.
+# MÓDULO DE ENTRADA DA APLICAÇÃO (main.py)
 #
 # ATUALIZAÇÃO:
-#   - Adicionada a rota '/onboarding' para a nova tela de configuração.
-#   - A lógica do `LoginViewModel` agora irá verificar se o onboarding é
-#     necessário e redirecionará o usuário para a rota correta.
+#   - Integração do módulo de estilos. Os temas claro e escuro agora são
+#     carregados a partir de `src/styles/style.py` para uma UI consistente.
+#   - Corrigida a aplicação de `extended_colors` para o tema.
 # =================================================================================
 import flet as ft
 import threading
 import logging
+import re
 
-# Importações das Views
-from src.views.login_view import LoginView
-from src.views.dashboard_view import DashboardView
-from src.views.register_view import RegisterView
-from src.views.onboarding_view import OnboardingView # --- NOVO ---
+# --- IMPORTAÇÃO DOS TEMAS E CORES PERSONALIZADAS ---
+from src.styles.style import AppThemes, success_color_scheme
+
+# Importações das View Factories
+from src.views.login_view import LoginViewFactory
+from src.views.dashboard_view import DashboardViewFactory
+from src.views.register_view import RegisterViewFactory
+from src.views.onboarding_view import OnboardingViewFactory
+from src.views.cadastro_cliente_view import CadastroClienteViewFactory
+from src.views.onboarding_cliente_view import OnboardingClienteViewFactory
+from src.views.gerir_clientes_view import GerirClientesViewFactory
+from src.views.editar_cliente_view import EditarClienteViewFactory
 
 # Importações de Serviços e Banco de Dados
 from src.services.task_queue_service import processar_fila_db
@@ -26,17 +33,40 @@ from src.database.database import initialize_database as inicializar_banco_de_da
 from src.database import queries
 from utils import criar_pastas
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - [%(filename)s] - %(message)s')
+
+# --- Factory Genérica para Telas em Desenvolvimento ---
+def PlaceholderViewFactory(page: ft.Page, title: str) -> ft.View:
+    return ft.View(
+        route=page.route,
+        appbar=ft.AppBar(title=ft.Text(title), bgcolor=page.theme.color_scheme.surface_variant),
+        controls=[ft.SafeArea(ft.Text(f"Tela de {title} em construção.", size=20))],
+        vertical_alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        padding=0
+    )
 
 def main(page: ft.Page):
     """
     Função principal que inicializa e configura a aplicação Flet.
     """
-    page.title = "Sistema OS Oficina Mecânica - v3.1"
-    page.theme_mode = ft.ThemeMode.DARK
-    # ... (outras configurações de página)
+    page.title = "Sistema OS Oficina Mecânica"
+    
+    # --- APLICAÇÃO DOS TEMAS GLOBAIS ---
+    page.theme = AppThemes.light_theme
+    page.dark_theme = AppThemes.dark_theme
 
-    # --- INICIALIZAÇÃO ---
+    # --- CORREÇÃO: Aplica as cores estendidas DEPOIS de definir os temas ---
+    page.theme.extended_colors = [success_color_scheme]
+    page.dark_theme.extended_colors = [success_color_scheme]
+    
+    # Define o tema inicial como escuro
+    page.theme_mode = ft.ThemeMode.DARK 
+    
+    page.window_maximizable = True
+    page.window_maximized = True
+
+    # --- INICIALIZAÇÃO DE SERVIÇOS DE FUNDO ---
     logging.info("Iniciando serviços de fundo...")
     inicializar_banco_de_dados()
     thread_db = threading.Thread(target=processar_fila_db, args=(page,), daemon=True)
@@ -46,29 +76,64 @@ def main(page: ft.Page):
     # --- GERENCIADOR DE ROTAS ---
     def route_change(route):
         logging.info(f"Navegando para a rota: {page.route}")
-        app_container = ft.Container(
-            # ... (configurações do container)
-            alignment=ft.alignment.center,
-        )
+        edit_cliente_route = re.match(r"/editar_cliente/(\d+)", page.route)
         page.views.clear()
 
-        # Mapeamento de rotas para as Views
+        # Mapeamento de rotas para as View Factories
         if page.route == "/login":
-            app_container.content = LoginView(page)
-            page.views.append(ft.View(route="/login", controls=[app_container]))
+            page.views.append(LoginViewFactory(page))
         elif page.route == "/register":
-            app_container.content = RegisterView(page)
-            page.views.append(ft.View(route="/register", controls=[app_container]))
-        # --- NOVA ROTA DE ONBOARDING ---
+            page.views.append(RegisterViewFactory(page))
         elif page.route == "/onboarding":
-            app_container.content = OnboardingView(page)
-            page.views.append(ft.View(route="/onboarding", controls=[app_container]))
+            page.views.append(OnboardingViewFactory(page))
         elif page.route == "/dashboard":
-            app_container.content = DashboardView(page)
-            page.views.append(ft.View(route="/dashboard", controls=[app_container]))
+            page.views.append(DashboardViewFactory(page))
+        
+        # --- Rotas de Cadastro ---
+        elif page.route == "/gerir_clientes":
+            page.views.append(GerirClientesViewFactory(page))
+        elif page.route == "/cadastro_cliente":
+            page.views.append(CadastroClienteViewFactory(page))
+        elif edit_cliente_route:
+            cliente_id = int(edit_cliente_route.group(1))
+            page.views.append(EditarClienteViewFactory(page, cliente_id=cliente_id))
+        elif page.route == "/gerir_veiculos":
+            page.views.append(PlaceholderViewFactory(page, "Gerenciar Veículos"))
+        elif page.route == "/gerir_pecas":
+            page.views.append(PlaceholderViewFactory(page, "Gerenciar Peças"))
+        elif page.route == "/gerir_servicos":
+            page.views.append(PlaceholderViewFactory(page, "Gerenciar Serviços"))
+        elif page.route == "/gerir_mecanicos":
+            page.views.append(PlaceholderViewFactory(page, "Gerenciar Mecânicos"))
+            
+        # --- Rotas de Serviços ---
+        elif page.route == "/nova_os":
+            page.views.append(PlaceholderViewFactory(page, "Nova Ordem de Serviço"))
+        elif page.route == "/novo_orcamento":
+            page.views.append(PlaceholderViewFactory(page, "Novo Orçamento"))
+        elif page.route == "/venda_pecas":
+            page.views.append(PlaceholderViewFactory(page, "Venda de Peças"))
+
+        # --- Rotas de Consultas e Relatórios ---
+        elif page.route == "/entrada_pecas":
+            page.views.append(PlaceholderViewFactory(page, "Entrada de Peças"))
+        elif page.route == "/estoque":
+            page.views.append(PlaceholderViewFactory(page, "Estoque"))
+        elif page.route == "/relatorios":
+            page.views.append(PlaceholderViewFactory(page, "Relatórios"))
+        
+        # --- Rotas Administrativas ---
+        elif page.route == "/minha_conta":
+            page.views.append(PlaceholderViewFactory(page, "Minha Conta"))
+        elif page.route == "/usuarios":
+            page.views.append(PlaceholderViewFactory(page, "Gerenciar Usuários"))
+        elif page.route == "/dados_oficina":
+            page.views.append(PlaceholderViewFactory(page, "Dados da Oficina"))
+
         else:
-            page.go(page.route)
-            return
+            # Rota de fallback caso nenhuma corresponda
+            page.views.append(DashboardViewFactory(page))
+        
         page.update()
 
     page.on_route_change = route_change

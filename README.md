@@ -1,13 +1,13 @@
 # **OS \- Sistema de Gestão para Oficina Mecânica 🚗🔧**
 
 \<p align="center"\>  
-\<img src="./assets/cover.png" alt="Logotipo do Projeto" width="300"/\>  
+\<img src="https://www.google.com/search?q=https://raw.githubusercontent.com/atnzpe/app\_oficina\_mecanica/main/assets/ico.png" alt="Logotipo do Projeto" width="250"/\>  
 \</p\>  
 \<p align="center"\>  
 \<img src="https://www.google.com/search?q=https://img.shields.io/badge/Plataforma-Desktop%2520%257C%2520Android-brightgreen%3Flogo%3Dandroid" alt="Plataforma"\>  
 \<img src="https://www.google.com/search?q=https://img.shields.io/badge/Python-3.10%252B-blue%3Flogo%3Dpython" alt="Python Version"\>  
 \<img src="https://www.google.com/search?q=https://img.shields.io/badge/Flet-Cross--Platform-green%3Flogo%3Dflutter" alt="Flet Framework"\>  
-\<img src="https://www.google.com/search?q=https://img.shields.io/badge/Status-Em%2520Desenvolvimento-orange" alt="Project Status"\>  
+\<img src="https://www.google.com/search?q=https://img.shields.io/badge/Status-Est%C3%A1vel%2520(MVP)-blue" alt="Project Status"\>  
 \</p\>
 
 ## **📄 Descrição**
@@ -18,36 +18,40 @@ Ele oferece um controle completo sobre o fluxo de trabalho, desde o cadastro de 
 
 ## **✨ Funcionalidades Principais**
 
-| Funcionalidade | Status | Issue Relacionada |
+| Funcionalidade | Status | Detalhes |
 | :---- | :---- | :---- |
-| **Gestão de Usuários:** Cadastro e login de administrador. | ✅ | [\#6](https://www.google.com/search?q=https://github.com/atnzpe/app_oficina_mecanica/issues/6) |
-| **Cadastro de Clientes:** Informações completas de clientes. | ✅ | N/A (Concluído) |
-| **Gerenciamento de Carros:** Associação de veículos aos clientes. | ✅ | N/A (Concluído) |
-| **Controle de Peças:** Cadastro e acompanhamento de estoque. | ✅ | N/A (Concluído) |
-| **Ordem de Serviço Completa:** Abertura e inclusão de peças/serviços. | ✅ | N/A (Concluído) |
-| **Relatórios Detalhados:** Emissão de relatórios de OS e estoque. | ✅ | N/A (Concluído) |
-| **Perfis de Acesso:** Diferenciação entre Admin e Mecânico. | ⏳ | [\#6](https://www.google.com/search?q=https://github.com/atnzpe/app_oficina_mecanica/issues/6) |
-| **Geração de QR Code para Pagamento:** Pagamento via QR Code. | ⏳ | A ser criada |
+| **Arquitetura MVVM Robusta** | ✅ | O código está 100% refatorado, separando UI, lógica e dados. |
+| **Fluxo de Autenticação Seguro** | ✅ | Cadastro do 1º admin, login com bcrypt, e navegação por rotas. |
+| **Onboarding Inteligente** | ✅ | Guia o novo usuário na configuração inicial da oficina. |
+| **Prompt para Primeiro Cliente** | ✅ | Incentiva o usuário a começar a usar o sistema ativamente. |
+| **Gestão de Clientes** | 🚧 | CRUD (Criar, Ler, Atualizar, Apagar) de clientes. |
+| **Gerenciamento de Carros** | 🚧 | CRUD de veículos, associados aos clientes. |
+| **Controle de Peças/Estoque** | 🚧 | CRUD de peças e controle de inventário. |
+| **Ordem de Serviço Completa** | 🚧 | Abertura e inclusão de peças/serviços. |
+| **Perfis de Acesso** | ⏳ | Diferenciação entre Admin e Mecanico. |
+| **Sincronização na Nuvem** | ⏳ | Backup e recuperação de dados via Firebase. |
 
 ## **🏛️ Arquitetura e Conceitos Chave**
 
 Este projeto foi construído sobre princípios modernos de desenvolvimento de software para garantir escalabilidade, segurança e uma ótima experiência de usuário.
 
-* **Plataforma Multiplataforma:** Utilizando Flet, o aplicativo é compilado nativamente para **Desktop (Windows)** e **Android** a partir de uma única base de código em Python.  
-* **Arquitetura Offline-First:** O aplicativo funciona perfeitamente sem internet. Todas as operações são salvas em um banco de dados **SQLite local**.  
-* **Sincronização na Nuvem:** Os dados locais são sincronizados com um banco de dados **Firebase Firestore**, criando um backup seguro e permitindo o uso em múltiplos dispositivos.  
-* **Recuperação de Dados via Login Google:** A autenticação de usuários via **Login com Google (Gmail)** permite que o usuário recupere toda a sua base de dados em qualquer dispositivo.  
-* **Navegação por Rotas:** A navegação entre as telas é gerenciada por um sistema de rotas (ex: /dashboard, /clientes/novo), tornando o código mais organizado e a navegação mais fluida.  
-* **Padrão MVVM (Model-View-ViewModel):** O código está sendo estruturado no padrão MVVM, que separa claramente a lógica de negócio (ViewModel) da interface do usuário (View).
+* **Arquitetura Offline-First (SQLite):** O coração da aplicação é um banco de dados **SQLite local** (database.db). Todas as operações (cadastros, edições, exclusões) são executadas diretamente neste banco de dados, garantindo que o sistema seja **100% funcional sem conexão com a internet**.  
+* **Sincronização na Nuvem (Firebase Firestore):** (Planejado) Para garantir o backup e a utilização em múltiplos dispositivos, um serviço de sincronização irá operar em segundo plano. Quando conectado à internet, ele enviará as alterações do banco local (SQLite) para um banco de dados **Firebase Firestore** na nuvem e buscará por atualizações externas.  
+* **Recuperação de Dados via Login Google (Firebase Auth):** (Planejado) A autenticação de usuários via **Login com Google** é a chave para a portabilidade. Ao logar em um novo dispositivo, o sistema se conectará ao Firebase, identificará o usuário e fará o download de todos os dados do Firestore para a base de dados SQLite local, restaurando completamente o ambiente de trabalho do usuário.  
+* **Padrão MVVM (Model-View-ViewModel):** O código está estritamente estruturado no padrão MVVM, que separa claramente as responsabilidades:  
+  * **Model:** As classes de dados (models.py) e a camada de acesso ao banco (database.py, queries.py).  
+  * **View:** Os componentes visuais da UI (views/).  
+  * **ViewModel:** O "cérebro" da UI, contendo a lógica e o estado (viewmodels/).
 
-\<details\> \<summary\>\<strong\>Clique para ver a Estrutura de Arquivos Planejada\</strong\>\</summary\>
+\<details\> \<summary\>\<strong\>Clique para ver a Estrutura de Arquivos\</strong\>\</summary\>
 
 src/  
 ├── models/             \# MODEL: Classes de dados (Cliente, Carro, etc.)  
-├── database/           \# MODEL: Lógica de acesso ao banco de dados local.  
+├── database/           \# MODEL: Lógica de conexão e acesso ao banco de dados.  
 ├── views/              \# VIEW: Componentes visuais da UI (Flet).  
-├── viewmodels/         \# VIEWMODEL: O "cérebro" da UI, contendo a lógica e o estado.  
-└── services/           \# SERVIÇOS: Lógica desacoplada (auth, sync, reports).
+├── viewmodels/         \# VIEWMODEL: O "cérebro" da UI, com a lógica e o estado.  
+├── services/           \# SERVIÇOS: Lógica desacoplada (auth, sync, reports).  
+└── styles/             \# ESTILOS: Constantes de design (cores, fontes).
 
 \</details\>
 
@@ -58,10 +62,9 @@ src/
 | **Python 3.10+** | Linguagem principal do projeto. |
 | **Flet** | Framework para construção da interface gráfica para Desktop e Android. |
 | **SQLite3** | Banco de dados relacional local para a funcionalidade offline. |
-| **Firebase (Firestore)** | Banco de dados NoSQL na nuvem para sincronização e backup. |
-| **Firebase (Auth)** | Serviço para autenticação de usuários, incluindo Login com Google. |
 | **Bcrypt** | Biblioteca para hashing seguro de senhas locais. |
-| **ReportLab / FPDF** | Bibliotecas para geração de documentos PDF. |
+| **FPDF** | Biblioteca para geração de relatórios em PDF. |
+| **Firebase (Firestore/Auth)** | (Planejado) Serviços de nuvem para sincronização e autenticação. |
 
 ## **🚀 Como Executar o Projeto**
 
@@ -84,30 +87,27 @@ Siga os passos abaixo para configurar e rodar a aplicação em seu ambiente de d
    pip install \-r requirements.txt
 
 4. **Execute a Aplicação:**  
-   python \-m src.main
+   flet run main.py
 
-   Na primeira execução, o banco de dados local e as pastas necessárias (data, report, etc.) serão criados automaticamente.
+   Na primeira execução, o banco de dados data/database.db e as pastas necessárias serão criados. Você será guiado para criar o primeiro usuário administrador e configurar a oficina.
 
 ## **🗺️ Roadmap do Projeto**
 
 Nosso roadmap é gerenciado através das [**Issues do GitHub**](https://github.com/atnzpe/app_oficina_mecanica/issues). As principais frentes de trabalho são:
 
-* ✅ **Issue \#2: Unificação e Uso Efetivo da Camada de Modelo (ORM)**  
-  * \[x\] Refatorar a camada de banco de dados para retornar objetos.  
-  * \[x\] Atualizar os componentes da UI para consumir objetos em vez de tuplas.  
-* 🚧 **Issue \#1: Refatoração Arquitetural para o Padrão MVVM (Em Andamento)**  
-  * \[ \] Criar a nova estrutura de pastas (views, viewmodels, services).  
-  * \[ \] Desmembrar os arquivos atuais, separando a lógica (ViewModel) da interface (View).  
-* ⏳ **Issue \#6: Modernização da UI de Autenticação e Navegação por Rotas (Planejado)**  
-  * \[ \] Implementar o fluxo de navegação por rotas.  
+* ✅ **Issue \#1 & \#2: Refatoração Arquitetural para MVVM (Concluído)**  
+  * \[x\] Estruturação do código em views, viewmodels, services.  
+  * \[x\] Criação da camada de acesso a dados com database.py e queries.py.  
+  * \[x\] Implementação de fluxo de login, onboarding e prompt seguros.  
+* 🚧 **Issue \#8: Implementar CRUD de Clientes (Em Andamento)**  
+  * \[ \] Desenvolver a View e o ViewModel para cadastro e edição de clientes.  
+* ⏳ **Issue \#6: Modernização da Autenticação (Planejado)**  
   * \[ \] Integrar o Firebase Authentication para login com Google.  
-* ⏳ **Issue \#5: Arquitetura Offline-First com Sincronização na Nuvem (Planejado)**  
+* ⏳ **Issue \#5: Sincronização na Nuvem (Planejado)**  
   * \[ \] Configurar projeto no Firebase (Firestore).  
   * \[ \] Desenvolver o serviço de sincronização entre SQLite e Firestore.  
 * ⏳ **Issue \#7: Pipeline de Build Multiplataforma (Planejado)**  
-  * \[x\] Criação do arquivo requirements.txt.  
-  * \[ \] Configurar script de build para Windows (.exe) via PyInstaller.  
-  * \[ \] Configurar script de build para Android (.apk).
+  * \[ \] Configurar script de build para Windows (.exe) e Android (.apk).
 
 ## **🤝 Contribuições**
 
@@ -115,7 +115,7 @@ Contribuições são muito bem-vindas\! Se você encontrar um bug ou tiver uma s
 
 ## **👨‍💻 Desenvolvedores**
 
-| \<img src="https://github.com/atnzpe/my\_portifolio/blob/main/assets/img/profile-img.jpg" width=115\>\<br\>\<sub\>Gleyson Atanázio\</sub\> | \<img src="https://avatars.githubusercontent.com/u/101737645?v=4" width=115\>\<br\>\<sub\>Vanderson\</sub\> |
+| \<img src="https://www.google.com/search?q=https://avatars.githubusercontent.com/u/89949983%3Fv%3D4" width=115\> \<sub\>Gleyson Atanázio\</sub\> | \<img src="https://avatars.githubusercontent.com/u/101737645?v=4" width=115\> \<sub\>Vanderson\</sub\> |
 | :---- | :---- |
 
 \<p align="center"\> ⌨️ com 💜 por Gleyson Atanázio e Vanderson \</p\>
