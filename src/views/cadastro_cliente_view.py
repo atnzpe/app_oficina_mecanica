@@ -1,16 +1,13 @@
 # =================================================================================
 # MÓDULO DA VIEW DE CADASTRO DE CLIENTE (cadastro_cliente_view.py)
 #
-# REATORAÇÃO:
-#   - A View foi transformada de um gerenciador de AlertDialog para um componente
-#     de página completa (ft.Column).
-#   - Foi criada a `CadastroClienteViewFactory` para construir o `ft.View`
-#     completo que será usado pelo roteador em main.py.
-#   - Integrado o `style.py` para padronização da UI.
+# ATUALIZAÇÃO (UX):
+#   - Adicionado o método `mostrar_dialogo_feedback` para exibir um
+#     CupertinoAlertDialog, tornando o feedback mais explícito e nativo.
+#   - Garantido o uso de SafeArea na ViewFactory.
 # =================================================================================
 import flet as ft
 from src.viewmodels.cadastro_cliente_viewmodel import CadastroClienteViewModel
-# Importa as classes de estilo para fontes e dimensões.
 from src.styles.style import AppDimensions, AppFonts
 
 
@@ -20,81 +17,42 @@ class CadastroClienteView(ft.Column):
     """
 
     def __init__(self, page: ft.Page):
-        # 1. Chamada ao construtor da classe pai (ft.Column).
         super().__init__()
-
-        # 2. Referências e instanciação do ViewModel.
         self.page = page
         self.view_model = CadastroClienteViewModel(page)
         self.view_model.vincular_view(self)
 
         # --- Componentes Visuais do Formulário ---
-        # Todos os campos agora usam as dimensões e raios de borda padronizados.
-        self._nome_field = ft.TextField(
-            label="Nome do Cliente",
-            width=AppDimensions.FIELD_WIDTH,
-            autofocus=True,
-            border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS)
-        )
-        self._telefone_field = ft.TextField(
-            label="Telefone",
-            width=AppDimensions.FIELD_WIDTH,
-            border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS),
-            keyboard_type=ft.KeyboardType.PHONE
-        )
+        self._nome_field = ft.TextField(label="Nome do Cliente", width=AppDimensions.FIELD_WIDTH,
+                                        autofocus=True, border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS))
+        self._telefone_field = ft.TextField(label="Telefone", width=AppDimensions.FIELD_WIDTH, border_radius=ft.border_radius.all(
+            AppDimensions.BORDER_RADIUS), keyboard_type=ft.KeyboardType.PHONE)
         self._endereco_field = ft.TextField(
-            label="Endereço",
-            width=AppDimensions.FIELD_WIDTH,
-            border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS)
-        )
-        self._email_field = ft.TextField(
-            label="Email",
-            width=AppDimensions.FIELD_WIDTH,
-            border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS),
-            keyboard_type=ft.KeyboardType.EMAIL
-        )
+            label="Endereço", width=AppDimensions.FIELD_WIDTH, border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS))
+        self._email_field = ft.TextField(label="Email (Opcional)", width=AppDimensions.FIELD_WIDTH, border_radius=ft.border_radius.all(
+            AppDimensions.BORDER_RADIUS), keyboard_type=ft.KeyboardType.EMAIL)
 
         # --- Estrutura da Página ---
-        # Define o alinhamento e a distribuição dos controles na tela.
         self.alignment = ft.MainAxisAlignment.CENTER
         self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
         self.spacing = 20
-        # A lista de controles que compõem a view.
         self.controls = [
-            # Título da página, utilizando a fonte padrão para títulos.
             ft.Text("Cadastro de Novo Cliente",
                     size=AppFonts.TITLE_MEDIUM, weight=ft.FontWeight.BOLD),
-            self._nome_field,
-            self._telefone_field,
-            self._endereco_field,
-            self._email_field,
-            # Linha para agrupar os botões de ação.
+            self._nome_field, self._telefone_field, self._endereco_field, self._email_field,
             ft.Row(
                 [
-                    # Botão para cancelar a operação.
-                    ft.ElevatedButton("Cancelar", on_click=self.view_model.cancelar_cadastro,
-                                      # As cores devem vir do tema para bom contraste.
-                                      # Exemplo de como usar cores do tema:
-                                      # color=self.page.theme.color_scheme.on_error,
-                                      # bgcolor=self.page.theme.color_scheme.error
-                                      ),
-                    # Botão para salvar, delega a ação para o ViewModel.
                     ft.ElevatedButton(
-                        "Salvar Cliente",
-                        icon=ft.Icons.SAVE_OUTLINED,
-                        on_click=self.view_model.salvar_cliente),
+                        "Cancelar", on_click=self.view_model.cancelar_cadastro),
+                    ft.ElevatedButton(
+                        "Salvar Cliente", icon=ft.Icons.SAVE_OUTLINED, on_click=self.view_model.salvar_cliente),
                 ],
-                # Alinha os botões à direita.
-                alignment=ft.MainAxisAlignment.END,
-                spacing=10
+                alignment=ft.MainAxisAlignment.END, spacing=10, width=AppDimensions.FIELD_WIDTH
             )
         ]
 
     def obter_dados_formulario(self) -> dict:
-        """
-        Envia os dados dos campos para o ViewModel.
-        Este método não sofreu alterações.
-        """
+        """Envia os dados dos campos para o ViewModel."""
         return {
             "nome": self._nome_field.value,
             "telefone": self._telefone_field.value,
@@ -102,48 +60,49 @@ class CadastroClienteView(ft.Column):
             "email": self._email_field.value,
         }
 
-    def mostrar_feedback(self, mensagem: str, sucesso: bool):
-        """
-        Exibe uma SnackBar para feedback ao usuário.
-        Este método é chamado pelo ViewModel.
-        """
-        self.page.snack_bar = ft.SnackBar(
-            content=ft.Text(mensagem),
-            # As cores de sucesso e erro são obtidas do tema para consistência.
-            bgcolor=self.page.theme.color_scheme.primary if sucesso else self.page.theme.color_scheme.error
-        )
-        self.page.snack_bar.open = True
-        self.page.update()
+    # --- MÉTODO DE FEEDBACK COM DIÁLOGO CUPERTINO ---
+    def mostrar_dialogo_feedback(self, titulo: str, conteudo: str, on_ok_action):
+        """Exibe um CupertinoAlertDialog para feedback explícito ao usuário."""
+        def fechar_dialogo_e_agir(e):
+            # Fecha o diálogo na interface
+            dialog.open = False
+            self.page.update()
+            # Se uma ação foi passada (como a navegação), executa-a.
+            if on_ok_action:
+                on_ok_action(e)
 
-# --- NOVA FACTORY ---
+        dialog = ft.CupertinoAlertDialog(
+            title=ft.Text(titulo),
+            content=ft.Text(conteudo),
+            actions=[
+                ft.CupertinoDialogAction("OK", on_click=fechar_dialogo_e_agir)
+            ],
+        )
+
+        # O AlertDialog é adicionado ao `overlay` da página para ser exibido.
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
 
 
 def CadastroClienteViewFactory(page: ft.Page) -> ft.View:
     """Cria a View completa de Cadastro de Cliente para o roteador."""
     view_content = CadastroClienteView(page)
-
     appbar = ft.AppBar(
-        title=ft.Text("Cadastrar Novo Cliente"),
-        center_title=True,
+        title=ft.Text("Cadastrar Novo Cliente"), center_title=True,
         bgcolor=page.theme.color_scheme.surface,
         leading=ft.IconButton(
-            icon=ft.Icons.ARROW_BACK_IOS_NEW,
-            on_click=lambda _: page.go("/gerir_clientes"), # Rota corrigida para voltar à lista
+            icon=ft.Icons.ARROW_BACK_IOS_NEW, on_click=lambda _: page.go(
+                "/gerir_clientes"),
             tooltip="Voltar para a Lista de Clientes"
         )
     )
-
     return ft.View(
-        route="/cadastro_cliente",
-        appbar=appbar,
+        route="/cadastro_cliente", appbar=appbar,
         controls=[
-            # --- SAFEAREA APLICADO ---
             ft.SafeArea(
                 content=ft.Container(
-                    content=view_content,
-                    alignment=ft.alignment.center,
-                    expand=True
-                ),
+                    content=view_content, alignment=ft.alignment.center, expand=True),
                 expand=True
             )
         ],

@@ -1,24 +1,24 @@
-# -*- coding: utf-8 -*-
-
-## =================================================================================
+# =================================================================================
 # MÓDULO DO VIEWMODEL DE CADASTRO DE CLIENTE (cadastro_cliente_viewmodel.py)
 #
-# ATUALIZAÇÃO:
-#   - `salvar_cliente`: Após o sucesso, agora usa `self.page.go()` para navegar
-#     de volta ao dashboard em vez de fechar um modal.
-#   - `cancelar_cadastro`: Novo método para lidar com o clique no botão "Cancelar",
-#     navegando de volta ao dashboard.
+# ATUALIZAÇÃO (UX & Robustez):
+#   - Substituída a lógica de feedback por um comando para a View exibir um
+#     CupertinoAlertDialog, que é mais explícito.
+#   - Adicionado tratamento de exceções (try...except) para robustez.
 # =================================================================================
 import flet as ft
 import logging
 from src.database import queries
 
+# Configura o logger para este módulo.
 logger = logging.getLogger(__name__)
+
 
 class CadastroClienteViewModel:
     """
     O ViewModel para a CadastroClienteView.
     """
+
     def __init__(self, page: ft.Page):
         self.page = page
         self._view: 'CadastroClienteView' | None = None
@@ -29,43 +29,66 @@ class CadastroClienteViewModel:
 
     def salvar_cliente(self, e):
         """
-        Pega os dados da View, valida, comanda a inserção no banco de dados e
-        redireciona o usuário.
+        Pega dados da View, valida, e comanda a exibição de um diálogo de feedback.
+        A navegação ocorre após o usuário fechar o diálogo.
         """
+        # Garante que a view esteja vinculada para evitar erros.
         if not self._view:
+            logging.error(
+                "ViewModel: Ação 'salvar_cliente' chamada sem uma View vinculada.")
             return
 
-        dados = self._view.obter_dados_formulario()
-        nome = dados.get("nome")
-        
-        # A lógica de validação permanece a mesma.
-        if not nome or not nome.strip():
-            logger.warning("Tentativa de salvar cliente sem nome.")
-            self._view.mostrar_feedback("O campo 'Nome' é obrigatório.", False)
-            return
+        try:
+            dados = self._view.obter_dados_formulario()
+            nome = dados.get("nome")
+            telefone = dados.get("telefone")
+            endereco = dados.get("endereco")
 
-        logger.info(f"ViewModel: Tentando salvar o novo cliente '{nome}'.")
-        novo_cliente = queries.criar_cliente(
-            nome=nome,
-            telefone=dados.get("telefone"),
-            endereco=dados.get("endereco"),
-            email=dados.get("email")
-        )
+            # Validação explícita: Simples é melhor que complexo.
+            if not nome or not nome.strip():
+                self._view.mostrar_dialogo_feedback(
+                    "Erro de Validação", "O campo 'Nome do Cliente' é obrigatório.", None)
+                return
+            if not telefone or not telefone.strip():
+                self._view.mostrar_dialogo_feedback(
+                    "Erro de Validação", "O campo 'Telefone' é obrigatório.", None)
+                return
+            if not endereco or not endereco.strip():
+                self._view.mostrar_dialogo_feedback(
+                    "Erro de Validação", "O campo 'Endereço' é obrigatório.", None)
+                return
 
-        if novo_cliente:
-            # SUCESSO: Mostra o feedback e NAVEGA de volta para o dashboard.
-            logger.info(f"Cliente '{nome}' salvo com sucesso. Redirecionando para /dashboard.")
-            # A snackbar ainda será exibida na tela atual antes da navegação.
-            self._view.mostrar_feedback(f"Cliente '{novo_cliente.nome}' cadastrado com sucesso!", True)
-            self.page.go("/dashboard")
-        else:
-            # FALHA: Apenas mostra o feedback de erro.
-            self._view.mostrar_feedback("Ocorreu um erro ao cadastrar o cliente.", False)
-    
+            logger.info(f"ViewModel: Tentando salvar o novo cliente '{nome}'.")
+            novo_cliente = queries.criar_cliente(
+                nome=nome, telefone=telefone, endereco=endereco, email=dados.get(
+                    "email")
+            )
+
+            if novo_cliente:
+                logger.info(
+                    f"Cliente '{nome}' salvo. Exibindo diálogo de sucesso.")
+                # A ação de navegação é passada para a view, que a executará após o "OK".
+                def on_ok_action(_): return self.page.go("/gerir_clientes")
+                self._view.mostrar_dialogo_feedback(
+                    "Sucesso!",
+                    f"Cliente '{novo_cliente.nome}' cadastrado com sucesso!",
+                    on_ok_action
+                )
+            else:
+                # Se a query retornar None, é um erro interno do banco de dados.
+                self._view.mostrar_dialogo_feedback(
+                    "Erro Interno", "Ocorreu um erro ao salvar os dados no banco.", None)
+
+        except Exception as e:
+            # Erros devem ser explícitos e nunca passar silenciosamente.
+            logging.error(
+                f"Erro inesperado ao salvar cliente: {e}", exc_info=True)
+            if self._view:
+                self._view.mostrar_dialogo_feedback(
+                    "Erro Crítico", f"Ocorreu uma falha inesperada:\n{e}", None)
+
     def cancelar_cadastro(self, e):
-        """
-        Navega de volta para o dashboard sem salvar nenhuma informação.
-        """
-        logger.info("Cadastro de cliente cancelado. Redirecionando para /dashboard.")
-        self.page.go("/dashboard")
-        
+        """Navega de volta para a lista de clientes."""
+        logger.info(
+            "Cadastro de cliente cancelado. Redirecionando para /gerir_clientes.")
+        self.page.go("/gerir_clientes")
