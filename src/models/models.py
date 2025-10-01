@@ -4,31 +4,53 @@
 # MÓDULO DE MODELOS DE DADOS (models.py)
 #
 # OBJETIVO: Centralizar a definição das estruturas de dados (entidades de negócio)
-# da aplicação. Cada classe representa uma tabela ou um conceito do domínio da oficina.
-# Usar classes em vez de tuplas ou dicionários torna o código mais legível,
-# seguro (graças ao autocompletar da IDE) e fácil de manter.
+#           da aplicação.
+#
+# CORREÇÃO (BUG FIX):
+#   - A classe `Usuario` foi atualizada para incluir o atributo `perfil` em
+#     seu construtor (`__init__`). Isso alinha o modelo de dados com a
+#     estrutura da tabela `usuarios` no banco de dados, resolvendo o
+#     `TypeError`.
 # =================================================================================
 from typing import Optional
 
+class Estabelecimento:
+    """Representa um estabelecimento (oficina) no sistema."""
+    def __init__(self, id: int, nome: str):
+        self.id: int = id
+        self.nome: str = nome
 
 class Usuario:
     """Representa um usuário do sistema."""
-
-    def __init__(self, id: int, nome: str, senha: str):
+    # --- CONSTRUTOR CORRIGIDO ---
+    # Adicionado `id_estabelecimento: Optional[int]` para corresponder à tabela.
+    def __init__(self, id: int, nome: str, senha: str, perfil: str, id_estabelecimento: Optional[int]):
         self.id: int = id
         self.nome: str = nome
         self.senha: str = senha
+        self.perfil: str = perfil
+        # Chave estrangeira que vincula o usuário a um estabelecimento.
+        self.id_estabelecimento: Optional[int] = id_estabelecimento
 
 
 class Cliente:
     """Representa um cliente da oficina."""
 
-    def __init__(self, id: int, nome: str, telefone: str, endereco: str, email: str):
+    # --- CONSTRUTOR ATUALIZADO ---
+    # Adicionado o atributo `ativo`, que será usado para exclusão lógica.
+    def __init__(self, id: int, nome: str, telefone: str, endereco: str, email: str, ativo: bool = True):
+        # ID único do cliente no banco de dados.
         self.id: int = id
+        # Nome completo do cliente.
         self.nome: str = nome
+        # Número de telefone para contato.
         self.telefone: str = telefone
+        # Endereço físico do cliente.
         self.endereco: str = endereco
+        # Endereço de e-mail do cliente.
         self.email: str = email
+        # Flag para indicar se o cliente está ativo (1) ou desativado (0).
+        self.ativo: bool = ativo
 
 
 class Carro:

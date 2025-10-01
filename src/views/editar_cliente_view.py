@@ -1,152 +1,145 @@
-# -*- coding: utf-8 -*-
-
 # =================================================================================
-# MÓDULO DO COMPONENTE DE EDIÇÃO DE CLIENTE (editar_cliente.py)
+# MÓDULO DA VIEW DE EDIÇÃO DE CLIENTE (editar_cliente_view.py)
 #
-# OBJETIVO: Encapsular a UI e a lógica para pesquisar e atualizar clientes.
+# ATUALIZAÇÃO (Bug Fix & UX):
+#   - Adicionado botão "Cancelar".
+#   - Corrigido o fluxo de navegação pós-diálogo usando um Timer.
+#   - Padronizado o uso de AlertDialog para máxima estabilidade.
 # =================================================================================
 import flet as ft
 import logging
-from models.models import Cliente, Carro
-from src.database.database import criar_conexao_banco_de_dados, NOME_BANCO_DE_DADOS
+from src.viewmodels.editar_cliente_viewmodel import EditarClienteViewModel
+from src.models.models import Cliente
+from src.styles.style import AppDimensions, AppFonts
+from threading import Timer  # Importa o Timer
 
-# Configuração do logger.
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-class EditarCliente(ft.UserControl):
-    """UserControl que encapsula a funcionalidade de pesquisa e edição de clientes."""
-
-    def __init__(self, page: ft.Page, oficina_app):
-        """Construtor. Inicializa a UI e o estado do componente."""
+class EditarClienteView(ft.Column):
+    def __init__(self, page: ft.Page, cliente_id: int):
         super().__init__()
         self.page = page
-        self.oficina_app = oficina_app
-        self.conexao = criar_conexao_banco_de_dados(NOME_BANCO_DE_DADOS)
-        self.cliente_em_edicao: Cliente | None = None
+        self.view_model = EditarClienteViewModel(page, cliente_id)
+        self.view_model.vincular_view(self)
+        self.on_mount = self.did_mount
 
-        # --- Componentes Visuais ---
-        self._campo_nome = ft.TextField(label="Nome")
-        self._campo_telefone = ft.TextField(label="Telefone")
-        self._campo_endereco = ft.TextField(label="Endereço")
-        self._campo_email = ft.TextField(label="Email")
-        self._carros_dropdown = ft.Dropdown(width=350, hint_text="Carros do Cliente")
-        self._campo_pesquisa = ft.TextField(label="Pesquisar por Nome, Telefone ou Placa", on_submit=self._on_pesquisa_submit, autofocus=True)
-        self._resultados_pesquisa_col = ft.Column(scroll=ft.ScrollMode.ADAPTIVE, height=300)
+        self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+        self.alignment = ft.MainAxisAlignment.CENTER
+        self.spacing = 15
 
-        # --- Diálogos (Modais) ---
-        self._dlg_pesquisa = ft.AlertDialog(
-            modal=True, title=ft.Text("Pesquisar Cliente"),
-            content=ft.Column([self._campo_pesquisa, self._resultados_pesquisa_col]),
-            actions=[ft.TextButton("Fechar", on_click=self._fechar_dialogo_atual)],
+        self._campo_nome = ft.TextField(label="Nome", width=AppDimensions.FIELD_WIDTH,
+                                        border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS))
+        self._campo_telefone = ft.TextField(
+            label="Telefone", width=AppDimensions.FIELD_WIDTH, border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS))
+        self._campo_endereco = ft.TextField(
+            label="Endereço", width=AppDimensions.FIELD_WIDTH, border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS))
+        self._campo_email = ft.TextField(label="Email", width=AppDimensions.FIELD_WIDTH,
+                                         border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS))
+
+        self._desativar_btn = ft.ElevatedButton("Desativar Cliente", icon=ft.Icons.DELETE_FOREVER,
+                                                on_click=lambda _: self.view_model.solicitar_desativacao_cliente(), visible=False)
+        self._ativar_btn = ft.ElevatedButton("Ativar Cliente", icon=ft.Icons.CHECK_CIRCLE_OUTLINE,
+                                             on_click=lambda _: self.view_model.solicitar_ativacao_cliente(), visible=False)
+        self._salvar_btn = ft.ElevatedButton(
+            "Salvar Alterações", icon=ft.Icons.SAVE, on_click=self.on_salvar_click)
+        self._cancelar_btn = ft.ElevatedButton(
+            "Cancelar", on_click=lambda _: self.page.go("/gerir_clientes"))
+
+        self._dlg_confirmar_desativacao = ft.AlertDialog(modal=True, title=ft.Text("Confirmar Desativação"), content=ft.Text("Tem certeza de que deseja desativar este cliente?"), actions=[ft.TextButton(
+            "Cancelar", on_click=self.fechar_todos_os_modais), ft.ElevatedButton("Sim, Desativar", on_click=self.view_model.confirmar_desativacao_cliente)], actions_alignment=ft.MainAxisAlignment.END)
+        self._dlg_confirmar_ativacao = ft.AlertDialog(modal=True, title=ft.Text("Confirmar Ativação"), content=ft.Text("Tem certeza de que deseja reativar este cliente?"), actions=[ft.TextButton(
+            "Cancelar", on_click=self.fechar_todos_os_modais), ft.ElevatedButton("Sim, Ativar", on_click=self.view_model.confirmar_ativacao_cliente)], actions_alignment=ft.MainAxisAlignment.END)
+
+        self.controls = [
+            ft.Text("Editando Cliente", size=AppFonts.TITLE_MEDIUM,
+                    weight=ft.FontWeight.BOLD),
+            self._campo_nome, self._campo_telefone, self._campo_endereco, self._campo_email,
+            ft.Row(
+                [
+                    self._desativar_btn,
+                    self._ativar_btn,
+                    self._cancelar_btn,
+                    ft.Container(expand=True),
+                    self._salvar_btn
+                ],
+                width=AppDimensions.FIELD_WIDTH
+            )
+        ]
+
+    def did_mount(self):
+        logging.info(
+            "EditarClienteView foi montada. Aplicando cores do tema e carregando dados.")
+        if self.page.theme:
+            self._desativar_btn.color = self.page.theme.color_scheme.on_error
+            self._desativar_btn.bgcolor = self.page.theme.color_scheme.error
+            self._ativar_btn.color = self.page.theme.color_scheme.on_primary
+            self._ativar_btn.bgcolor = self.page.theme.color_scheme.primary
+            if self._dlg_confirmar_desativacao.actions:
+                self._dlg_confirmar_desativacao.actions[1].bgcolor = self.page.theme.color_scheme.error
+        self.view_model.carregar_dados_cliente()
+
+    def preencher_formulario(self, cliente: Cliente):
+        self._campo_nome.value = cliente.nome or ""
+        self._campo_telefone.value = cliente.telefone or ""
+        self._campo_endereco.value = cliente.endereco or ""
+        self._campo_email.value = cliente.email or ""
+        self._desativar_btn.visible = cliente.ativo
+        self._ativar_btn.visible = not cliente.ativo
+        self.update()
+
+    def on_salvar_click(self, e):
+        novos_dados = {"nome": self._campo_nome.value, "telefone": self._campo_telefone.value,
+                       "endereco": self._campo_endereco.value, "email": self._campo_email.value}
+        self.view_model.salvar_alteracoes(novos_dados)
+
+    def _fechar_dialogo_e_agir(self, e):
+        self.page.dialog.open = False
+        self.page.update()
+        t = Timer(0.1)
+        t.start()
+
+    def mostrar_dialogo_feedback(self, titulo: str, conteudo: str, ):
+        self.page.dialog = ft.AlertDialog(
+            modal=True, title=ft.Text(titulo), content=ft.Text(conteudo),
+            actions=[ft.TextButton(
+                "OK", on_click=lambda e: self._fechar_dialogo_e_agir(e))],
             actions_alignment=ft.MainAxisAlignment.END,
         )
-        self._dlg_edicao = ft.AlertDialog(
-            modal=True, title=ft.Text("Editar Cliente"),
-            content=ft.Column([self._campo_nome, self._campo_telefone, self._campo_endereco, self._campo_email, self._carros_dropdown]),
-            actions=[
-                ft.TextButton("Cancelar", on_click=self._fechar_dialogo_atual),
-                ft.ElevatedButton("Salvar", on_click=self._on_salvar_click),
-            ],
-            actions_alignment=ft.MainAxisAlignment.END,
-        )
+        self.page.dialog.open = True
+        self.page.update()
 
-    def build(self):
-        """Renderiza o controle inicial (botão)."""
-        return ft.ElevatedButton("Pesquisar / Editar Cliente", on_click=self._abrir_modal_pesquisa)
+    def abrir_modal_confirmacao_desativar(self):
+        self.page.dialog = self._dlg_confirmar_desativacao
+        self._dlg_confirmar_desativacao.open = True
+        self.page.update()
 
-    def _fechar_dialogo_atual(self, e):
-        """Fecha o diálogo aberto na página."""
+    def abrir_modal_confirmacao_ativar(self):
+        self.page.dialog = self._dlg_confirmar_ativacao
+        self._dlg_confirmar_ativacao.open = True
+        self.page.update()
+
+    def fechar_todos_os_modais(self, e=None):
         if self.page.dialog:
             self.page.dialog.open = False
-            self.page.update()
-
-    def _abrir_modal_pesquisa(self, e):
-        """Prepara e exibe o modal de pesquisa."""
-        self._campo_pesquisa.value = ""
-        self._resultados_pesquisa_col.controls.clear()
-        self.page.dialog = self._dlg_pesquisa
-        self._dlg_pesquisa.open = True
         self.page.update()
 
-    def _on_pesquisa_submit(self, e):
-        """Executa a busca e atualiza a lista de resultados."""
-        termo = self._campo_pesquisa.value
-        self._resultados_pesquisa_col.controls.clear()
-        clientes_encontrados = self._obter_clientes_por_termo(termo)
-        if not clientes_encontrados:
-            self._resultados_pesquisa_col.controls.append(ft.Text("Nenhum cliente encontrado."))
-        else:
-            for cliente in clientes_encontrados:
-                self._resultados_pesquisa_col.controls.append(
-                    ft.ListTile(
-                        title=ft.Text(cliente.nome),
-                        subtitle=ft.Text(f"Telefone: {cliente.telefone}"),
-                        on_click=lambda _, c=cliente: self._abrir_modal_edicao(c),
-                    )
-                )
-        self.page.update()
 
-    def _obter_clientes_por_termo(self, termo: str) -> list[Cliente]:
-        """Busca clientes no banco. Retorna uma lista de objetos `Cliente`."""
-        with self.conexao:
-            cursor = self.conexao.cursor()
-            cursor.execute(
-                "SELECT DISTINCT c.id, c.nome, c.telefone, c.endereco, c.email FROM clientes c LEFT JOIN carros car ON c.id = car.cliente_id WHERE c.nome LIKE ? OR c.telefone LIKE ? OR car.placa LIKE ?",
-                (f"%{termo}%", f"%{termo}%", f"%{termo}%")
+def EditarClienteViewFactory(page: ft.Page, cliente_id: int) -> ft.View:
+    return ft.View(
+        route=f"/editar_cliente/{cliente_id}",
+        appbar=ft.AppBar(
+            title=ft.Text("Editar Cliente"), center_title=True,
+            leading=ft.IconButton(icon=ft.Icons.ARROW_BACK_IOS_NEW, on_click=lambda _: page.go(
+                "/gerir_clientes"), tooltip="Voltar para a Lista"),
+            bgcolor=page.theme.color_scheme.surface,
+        ),
+        controls=[
+            ft.SafeArea(
+                content=ft.Container(content=EditarClienteView(
+                    page, cliente_id), alignment=ft.alignment.center, expand=True),
+                expand=True
             )
-            return [Cliente(**row) for row in cursor.fetchall()]
-
-    def _abrir_modal_edicao(self, cliente: Cliente):
-        """Prepara e exibe o modal de edição com os dados de um cliente."""
-        self._fechar_dialogo_atual(None)
-        self.cliente_em_edicao = cliente
-        self._campo_nome.value = cliente.nome
-        self._campo_telefone.value = cliente.telefone
-        self._campo_endereco.value = cliente.endereco
-        self._campo_email.value = cliente.email
-        self._carregar_carros_cliente(cliente.id)
-        self.page.dialog = self._dlg_edicao
-        self._dlg_edicao.open = True
-        self.page.update()
-
-    def _carregar_carros_cliente(self, cliente_id: int):
-        """Busca os carros de um cliente e popula o dropdown."""
-        carros = self._obter_carros_por_cliente_id(cliente_id)
-        self._carros_dropdown.options.clear()
-        if carros:
-            self._carros_dropdown.options = [ft.dropdown.Option(key=str(carro.id), text=f"{carro.modelo} - Placa: {carro.placa}") for carro in carros]
-        else:
-            self._carros_dropdown.options.append(ft.dropdown.Option(key="0", text="Nenhum carro cadastrado"))
-
-    def _obter_carros_por_cliente_id(self, cliente_id: int) -> list[Carro]:
-        """Busca os carros de um cliente pelo ID. Retorna uma lista de objetos `Carro`."""
-        with self.conexao:
-            cursor = self.conexao.cursor()
-            cursor.execute("SELECT id, modelo, ano, cor, placa, cliente_id FROM carros WHERE cliente_id = ?", (cliente_id,))
-            return [Carro(**row) for row in cursor.fetchall()]
-
-    def _on_salvar_click(self, e):
-        """Salva as alterações do cliente no banco de dados."""
-        if not self.cliente_em_edicao: return
-        try:
-            with self.conexao:
-                cursor = self.conexao.cursor()
-                cursor.execute("UPDATE clientes SET nome = ?, telefone = ?, endereco = ?, email = ? WHERE id = ?",
-                               (self._campo_nome.value, self._campo_telefone.value, self._campo_endereco.value,
-                                self._campo_email.value, self.cliente_em_edicao.id))
-            self._fechar_dialogo_atual(None)
-            self._mostrar_feedback("Cliente atualizado com sucesso!", success=True)
-        except Exception as ex:
-            logging.error(f"Erro ao salvar edição do cliente ID {self.cliente_em_edicao.id}: {ex}")
-            self._mostrar_feedback(f"Erro ao salvar: {ex}", success=False)
-        finally:
-            self.cliente_em_edicao = None
-
-    def _mostrar_feedback(self, mensagem: str, success: bool):
-        """Exibe uma SnackBar para feedback ao usuário."""
-        self.page.snack_bar = ft.SnackBar(
-            content=ft.Text(mensagem),
-            bgcolor=ft.Colors.GREEN_700 if success else ft.Colors.RED_700
-        )
-        self.page.snack_bar.open = True
-        self.page.update()
+        ],
+        vertical_alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        padding=0
+    )

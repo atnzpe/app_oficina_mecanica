@@ -1,43 +1,148 @@
+# Local do Arquivo: main.py
 
-
-import flet as ft  
+# -*- coding: utf-8 -*-
+# =================================================================================
+# MÓDULO DE ENTRADA DA APLICAÇÃO (main.py)
+#
+# ATUALIZAÇÃO:
+#   - Integração do módulo de estilos. Os temas claro e escuro agora são
+#     carregados a partir de `src/styles/style.py` para uma UI consistente.
+#   - Corrigida a aplicação de `extended_colors` para o tema.
+# =================================================================================
+import flet as ft
 import threading
-from flet import Dropdown, dropdown  # Importa Dropdown e dropdown
-import data
-from src.views.oficina_app_view import OficinaApp, processar_fila_db
+import logging
+import re
+
+# --- IMPORTAÇÃO DOS TEMAS E CORES PERSONALIZADAS ---
+from src.styles.style import AppThemes, success_color_scheme
+
+# Importações das View Factories
+from src.views.login_view import LoginViewFactory
+from src.views.dashboard_view import DashboardViewFactory
+from src.views.register_view import RegisterViewFactory
+from src.views.onboarding_view import OnboardingViewFactory
+from src.views.cadastro_cliente_view import CadastroClienteViewFactory
+from src.views.onboarding_cliente_view import OnboardingClienteViewFactory
+from src.views.gerir_clientes_view import GerirClientesViewFactory
+from src.views.editar_cliente_view import EditarClienteViewFactory
+
+# Importações de Serviços e Banco de Dados
+from src.services.task_queue_service import processar_fila_db
+from src.database.database import initialize_database as inicializar_banco_de_dados
+from src.database import queries
 from utils import criar_pastas
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - [%(filename)s] - %(message)s')
 
-# Função principal para iniciar a aplicação.
+# --- Factory Genérica para Telas em Desenvolvimento ---
+def PlaceholderViewFactory(page: ft.Page, title: str) -> ft.View:
+    return ft.View(
+        route=page.route,
+        appbar=ft.AppBar(title=ft.Text(title), bgcolor=page.theme.color_scheme.surface_variant),
+        controls=[ft.SafeArea(ft.Text(f"Tela de {title} em construção.", size=20))],
+        vertical_alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        padding=0
+    )
+
 def main(page: ft.Page):
     """
-    Função principal para iniciar a aplicação.
+    Função principal que inicializa e configura a aplicação Flet.
     """
+    page.title = "Sistema OS Oficina Mecânica"
+    
+    # --- APLICAÇÃO DOS TEMAS GLOBAIS ---
+    page.theme = AppThemes.light_theme
+    page.dark_theme = AppThemes.dark_theme
 
-    # Define o título da página como "Oficina Guarulhos".
-    page.title = "Oficina Guarulhos"
-    # Define a orientação vertical para os controles na página.
-    page.theme_mode = ft.ThemeMode.DARK
-    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-    page.vertical_alignment = ft.MainAxisAlignment.CENTER
-    # Cria uma instância da aplicação OficinaApp.
-    app = OficinaApp(page)
+    # --- CORREÇÃO: Aplica as cores estendidas DEPOIS de definir os temas ---
+    page.theme.extended_colors = [success_color_scheme]
+    page.dark_theme.extended_colors = [success_color_scheme]
+    
+    # Define o tema inicial como escuro
+    page.theme_mode = ft.ThemeMode.DARK 
+    
+    page.window_maximizable = True
+    page.window_maximized = True
 
-    # Executa a função processar_fila_db em uma thread separada.
+    # --- INICIALIZAÇÃO DE SERVIÇOS DE FUNDO ---
+    logging.info("Iniciando serviços de fundo...")
+    inicializar_banco_de_dados()
     thread_db = threading.Thread(target=processar_fila_db, args=(page,), daemon=True)
     thread_db.start()
-    page.on_close = lambda e: page.window.destroy()
-
-    # Inscreva-se para receber mensagens da thread do banco de dados
-    page.pubsub.subscribe(app._on_message)
-
-    # Criar as pastas necessárias
     criar_pastas(".")
 
-    # Constrói a interface do usuário chamando o método build da instância app.
-    
-    page.add(app.build())
+    # --- GERENCIADOR DE ROTAS ---
+    def route_change(route):
+        logging.info(f"Navegando para a rota: {page.route}")
+        edit_cliente_route = re.match(r"/editar_cliente/(\d+)", page.route)
+        page.views.clear()
 
+        # Mapeamento de rotas para as View Factories
+        if page.route == "/login":
+            page.views.append(LoginViewFactory(page))
+        elif page.route == "/register":
+            page.views.append(RegisterViewFactory(page))
+        elif page.route == "/onboarding":
+            page.views.append(OnboardingViewFactory(page))
+        elif page.route == "/dashboard":
+            page.views.append(DashboardViewFactory(page))
+        
+        # --- Rotas de Cadastro ---
+        elif page.route == "/gerir_clientes":
+            page.views.append(GerirClientesViewFactory(page))
+        elif page.route == "/cadastro_cliente":
+            page.views.append(CadastroClienteViewFactory(page))
+        elif edit_cliente_route:
+            cliente_id = int(edit_cliente_route.group(1))
+            page.views.append(EditarClienteViewFactory(page, cliente_id=cliente_id))
+        elif page.route == "/gerir_veiculos":
+            page.views.append(PlaceholderViewFactory(page, "Gerenciar Veículos"))
+        elif page.route == "/gerir_pecas":
+            page.views.append(PlaceholderViewFactory(page, "Gerenciar Peças"))
+        elif page.route == "/gerir_servicos":
+            page.views.append(PlaceholderViewFactory(page, "Gerenciar Serviços"))
+        elif page.route == "/gerir_mecanicos":
+            page.views.append(PlaceholderViewFactory(page, "Gerenciar Mecânicos"))
+            
+        # --- Rotas de Serviços ---
+        elif page.route == "/nova_os":
+            page.views.append(PlaceholderViewFactory(page, "Nova Ordem de Serviço"))
+        elif page.route == "/novo_orcamento":
+            page.views.append(PlaceholderViewFactory(page, "Novo Orçamento"))
+        elif page.route == "/venda_pecas":
+            page.views.append(PlaceholderViewFactory(page, "Venda de Peças"))
 
-# Inicializa a aplicação Flet com a função main se este script for executado.
-ft.app(target=main)
+        # --- Rotas de Consultas e Relatórios ---
+        elif page.route == "/entrada_pecas":
+            page.views.append(PlaceholderViewFactory(page, "Entrada de Peças"))
+        elif page.route == "/estoque":
+            page.views.append(PlaceholderViewFactory(page, "Estoque"))
+        elif page.route == "/relatorios":
+            page.views.append(PlaceholderViewFactory(page, "Relatórios"))
+        
+        # --- Rotas Administrativas ---
+        elif page.route == "/minha_conta":
+            page.views.append(PlaceholderViewFactory(page, "Minha Conta"))
+        elif page.route == "/usuarios":
+            page.views.append(PlaceholderViewFactory(page, "Gerenciar Usuários"))
+        elif page.route == "/dados_oficina":
+            page.views.append(PlaceholderViewFactory(page, "Dados da Oficina"))
+
+        else:
+            # Rota de fallback caso nenhuma corresponda
+            page.views.append(DashboardViewFactory(page))
+        
+        page.update()
+
+    page.on_route_change = route_change
+
+    # --- LÓGICA DE ROTA INICIAL ---
+    if queries.verificar_existencia_usuario():
+        page.go("/login")
+    else:
+        page.go("/register")
+
+if __name__ == "__main__":
+    ft.app(target=main)
