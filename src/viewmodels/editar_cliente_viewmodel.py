@@ -1,116 +1,122 @@
 # =================================================================================
 # MÓDULO DO VIEWMODEL DE EDIÇÃO DE CLIENTE (editar_cliente_viewmodel.py)
 #
-# ATUALIZAÇÃO (CRUD Cliente):
-#   - Adicionada a lógica completa para ATIVAR um cliente, incluindo
-#     solicitação de confirmação e chamada à nova query.
+# ATUALIZAÇÃO (Robustez):
+#   - Adicionado tratamento de exceções (try...except) em todos os métodos que
+#     interagem com o banco de dados para garantir que a aplicação não
+#     trave em caso de falha e exiba um feedback claro para o usuário.
 # =================================================================================
 import flet as ft
 import logging
 from src.database import queries
-from src.models.models import Cliente 
+from src.models.models import Cliente
 
+logger = logging.getLogger(__name__)
 
 
 class EditarClienteViewModel:
-    """
-    O ViewModel para a tela de edição de um cliente específico.
-    """
-
     def __init__(self, page: ft.Page, cliente_id: int):
-        """
-        Construtor do ViewModel.
-        :param page: A referência à página principal do Flet.
-        :param cliente_id: O ID do cliente a ser editado, vindo da URL.
-        """
         self.page = page
         self.cliente_id = cliente_id
         self._view: 'EditarClienteView' | None = None
         self.cliente_em_edicao: Cliente | None = None
 
     def vincular_view(self, view: 'EditarClienteView'):
-        """Estabelece a conexão de duas vias entre o ViewModel e a View."""
         self._view = view
 
     def carregar_dados_cliente(self):
-        """Busca os dados do cliente no DB e comanda a View para preencher o form."""
-        logging.info(
-            f"ViewModel: buscando dados para o cliente ID {self.cliente_id}")
-        # A query `obter_cliente_por_id` busca o cliente independente do status 'ativo'.
-        cliente = queries.obter_cliente_por_id(self.cliente_id)
-        if cliente and self._view:
-            self.cliente_em_edicao = cliente
-            self._view.preencher_formulario(cliente)
-        elif self._view:
-            self._view.mostrar_feedback("Cliente não encontrado.", False)
+        """Busca os dados do cliente e comanda a View para preencher o formulário."""
+        try:
+            logging.info(
+                f"ViewModel: buscando dados para o cliente ID {self.cliente_id}")
+            cliente = queries.obter_cliente_por_id(self.cliente_id)
+            if cliente and self._view:
+                self.cliente_em_edicao = cliente
+                self._view.preencher_formulario(cliente)
+            elif self._view:
+                
+                self.page.go("/gerir_clientes")
+                self._view.mostrar_dialogo_feedback(
+                    "Erro", "Cliente não encontrado.")
+        except Exception as e:
+            logging.error(
+                f"Erro ao carregar dados do cliente: {e}", exc_info=True)
+            if self._view:
+                self._view.mostrar_dialogo_feedback(
+                    "Erro Crítico", f"Não foi possível carregar os dados do cliente.\nErro: {e}", None)
 
     def salvar_alteracoes(self, novos_dados: dict):
-        """Salva as alterações e navega de volta para a lista de gerenciamento."""
-        logging.info(
-            f"ViewModel: salvando alterações para o cliente ID {self.cliente_id}")
-        sucesso = queries.atualizar_cliente(self.cliente_id, novos_dados)
-        if self._view:
-            if sucesso:
-                self._view.mostrar_feedback(
-                    "Cliente atualizado com sucesso!", True)
-                self.page.go("/gerir_clientes")
-            else:
-                self._view.mostrar_feedback(
-                    "Erro ao salvar alterações.", False)
+        """Salva as alterações e comanda a exibição de um diálogo de feedback."""
+        try:
+            logging.info(
+                f"ViewModel: salvando alterações para o cliente ID {self.cliente_id}")
+            sucesso = queries.atualizar_cliente(self.cliente_id, novos_dados)
+            if self._view:
+                if sucesso:
+                    
+                    self._view.mostrar_dialogo_feedback(
+                        "Sucesso!", "Cliente atualizado com sucesso!")
+                    self.page.go("/gerir_clientes")
+                else:
+                    self._view.mostrar_dialogo_feedback(
+                        "Atenção", "Nenhuma alteração foi salva. Os dados podem ser os mesmos.", None)
+        except Exception as e:
+            logging.error(
+                f"Erro ao salvar alterações do cliente: {e}", exc_info=True)
+            if self._view:
+                self._view.mostrar_dialogo_feedback(
+                    "Erro Crítico", f"Não foi possível salvar as alterações.\nErro: {e}", None)
 
     def solicitar_desativacao_cliente(self):
-        """Comanda a View para abrir o diálogo de confirmação de DESATIVAÇÃO."""
-        logging.info(
-            f"ViewModel: Solicitação de desativação para o cliente ID {self.cliente_id}.")
         if self._view:
-            self._view.abrir_modal_confirmacao_desativar()
+            return self._view.abrir_modal_confirmacao_desativar()
 
     def confirmar_desativacao_cliente(self, e):
-        """Desativa o cliente e navega de volta para a lista de gerenciamento."""
-        logging.info(
-            f"ViewModel: Confirmado! Desativando cliente ID: {self.cliente_id}")
-        sucesso = queries.desativar_cliente_por_id(self.cliente_id)
-        if self._view:
-            self._view.fechar_todos_os_modais()
-            if sucesso:
-                self._view.mostrar_feedback(
-                    "Cliente desativado com sucesso!", True)
-                self.page.go("/gerir_clientes")
-            else:
-                self._view.mostrar_feedback(
-                    "Erro ao desativar o cliente.", False)
+        """Desativa o cliente e comanda a exibição de um diálogo de feedback."""
+        try:
+            logging.info(
+                f"ViewModel: Confirmado! Desativando cliente ID: {self.cliente_id}")
+            sucesso = queries.desativar_cliente_por_id(self.cliente_id)
+            if self._view:
+                self._view.fechar_todos_os_modais()
+                if sucesso:
+                    
+                    self._view.mostrar_dialogo_feedback(
+                        "Sucesso!", "Cliente desativado com sucesso!")
+                    self.page.go("/gerir_clientes")
+                else:
+                    self._view.mostrar_dialogo_feedback(
+                        "Erro", "Erro ao desativar o cliente.", None)
+        except Exception as e:
+            logging.error(
+                f"Erro ao confirmar desativação do cliente: {e}", exc_info=True)
+            if self._view:
+                self._view.mostrar_dialogo_feedback(
+                    "Erro Crítico", f"Não foi possível desativar o cliente.\nErro: {e}", None)
 
-    # --- NOVOS MÉTODOS PARA ATIVAÇÃO ---
     def solicitar_ativacao_cliente(self):
-        """Comanda a View para abrir o diálogo de confirmação de ATIVAÇÃO."""
-        logging.info(
-            f"ViewModel: Solicitação de ATIVAÇÃO para o cliente ID {self.cliente_id}.")
         if self._view:
             self._view.abrir_modal_confirmacao_ativar()
 
     def confirmar_ativacao_cliente(self, e):
-        """ATIVA o cliente e navega de volta para a lista de gerenciamento."""
-        logging.info(
-            f"ViewModel: Confirmado! ATIVANDO cliente ID: {self.cliente_id}")
-        sucesso = queries.ativar_cliente_por_id(self.cliente_id)
-        if self._view:
-            self._view.fechar_todos_os_modais()
-            if sucesso:
-                self._view.mostrar_feedback(
-                    "Cliente ativado com sucesso!", True)
-                self.page.go("/gerir_clientes")
-            else:
-                self._view.mostrar_feedback("Erro ao ativar o cliente.", False)
-        """Desativa o cliente e navega de volta para a lista de gerenciamento."""
-        logging.info(
-            f"ViewModel: Confirmado! Desativando cliente ID: {self.cliente_id}")
-        sucesso = queries.desativar_cliente_por_id(self.cliente_id)
-        if self._view:
-            self._view.fechar_todos_os_modais()  # Fecha o diálogo de confirmação
-            if sucesso:
-                self._view.mostrar_feedback(
-                    "Cliente desativado com sucesso!", True)
-                self.page.go("/gerir_clientes")  # Navega de volta para a lista
-            else:
-                self._view.mostrar_feedback(
-                    "Erro ao desativar o cliente.", False)
+        """ATIVA o cliente e comanda a exibição de um diálogo de feedback."""
+        try:
+            logging.info(
+                f"ViewModel: Confirmado! ATIVANDO cliente ID: {self.cliente_id}")
+            sucesso = queries.ativar_cliente_por_id(self.cliente_id)
+            if self._view:
+                self._view.fechar_todos_os_modais()
+                if sucesso:
+                    
+                    self._view.mostrar_dialogo_feedback(
+                        "Sucesso!", "Cliente ativado com sucesso!")
+                    self.page.go("/gerir_clientes")
+                else:
+                    self._view.mostrar_dialogo_feedback(
+                        "Erro", "Erro ao ativar o cliente.", None)
+        except Exception as e:
+            logging.error(
+                f"Erro ao confirmar ativação do cliente: {e}", exc_info=True)
+            if self._view:
+                self._view.mostrar_dialogo_feedback(
+                    "Erro Crítico", f"Não foi possível ativar o cliente.\nErro: {e}", None)
