@@ -2,15 +2,16 @@
 # MÓDULO DA VIEW DE EDIÇÃO DE CLIENTE (editar_cliente_view.py)
 #
 # ATUALIZAÇÃO (Bug Fix & UX):
-#   - Corrigido o erro de ciclo de vida movendo a atribuição de cores dos botões
-#     para o método `did_mount`.
-#   - Substituído o feedback por `CupertinoAlertDialog`.
+#   - Adicionado botão "Cancelar".
+#   - Corrigido o fluxo de navegação pós-diálogo usando um Timer.
+#   - Padronizado o uso de AlertDialog para máxima estabilidade.
 # =================================================================================
 import flet as ft
 import logging
 from src.viewmodels.editar_cliente_viewmodel import EditarClienteViewModel
 from src.models.models import Cliente
 from src.styles.style import AppDimensions, AppFonts
+from threading import Timer  # Importa o Timer
 
 
 class EditarClienteView(ft.Column):
@@ -39,21 +40,27 @@ class EditarClienteView(ft.Column):
         self._ativar_btn = ft.ElevatedButton("Ativar Cliente", icon=ft.Icons.CHECK_CIRCLE_OUTLINE,
                                              on_click=lambda _: self.view_model.solicitar_ativacao_cliente(), visible=False)
         self._salvar_btn = ft.ElevatedButton(
-            "Salvar Alterações", icon=ft.Icons.SAVE, on_click=self._on_salvar_click)
+            "Salvar Alterações", icon=ft.Icons.SAVE, on_click=self.on_salvar_click)
+        self._cancelar_btn = ft.ElevatedButton(
+            "Cancelar", on_click=lambda _: self.page.go("/gerir_clientes"))
 
-        # Diálogos de Confirmação são definidos aqui. Suas cores também serão ajustadas em did_mount.
-        self._dlg_confirmar_desativacao = ft.CupertinoAlertDialog(title=ft.Text("Confirmar Desativação"), content=ft.Text("Tem certeza de que deseja desativar este cliente?"), actions=[ft.CupertinoDialogAction(
-            "Cancelar", on_click=self.fechar_todos_os_modais), ft.CupertinoDialogAction("Sim, Desativar", is_destructive_action=True, on_click=self.view_model.confirmar_desativacao_cliente)])
-        self._dlg_confirmar_ativacao = ft.CupertinoAlertDialog(title=ft.Text("Confirmar Ativação"), content=ft.Text("Tem certeza de que deseja reativar este cliente?"), actions=[
-                                                               ft.CupertinoDialogAction("Cancelar", on_click=self.fechar_todos_os_modais), ft.CupertinoDialogAction("Sim, Ativar", on_click=self.view_model.confirmar_ativacao_cliente)])
+        self._dlg_confirmar_desativacao = ft.AlertDialog(modal=True, title=ft.Text("Confirmar Desativação"), content=ft.Text("Tem certeza de que deseja desativar este cliente?"), actions=[ft.TextButton(
+            "Cancelar", on_click=self.fechar_todos_os_modais), ft.ElevatedButton("Sim, Desativar", on_click=self.view_model.confirmar_desativacao_cliente)], actions_alignment=ft.MainAxisAlignment.END)
+        self._dlg_confirmar_ativacao = ft.AlertDialog(modal=True, title=ft.Text("Confirmar Ativação"), content=ft.Text("Tem certeza de que deseja reativar este cliente?"), actions=[ft.TextButton(
+            "Cancelar", on_click=self.fechar_todos_os_modais), ft.ElevatedButton("Sim, Ativar", on_click=self.view_model.confirmar_ativacao_cliente)], actions_alignment=ft.MainAxisAlignment.END)
 
         self.controls = [
             ft.Text("Editando Cliente", size=AppFonts.TITLE_MEDIUM,
                     weight=ft.FontWeight.BOLD),
             self._campo_nome, self._campo_telefone, self._campo_endereco, self._campo_email,
             ft.Row(
-                [self._desativar_btn, self._ativar_btn,
-                    ft.Container(expand=True), self._salvar_btn],
+                [
+                    self._desativar_btn,
+                    self._ativar_btn,
+                    self._cancelar_btn,
+                    ft.Container(expand=True),
+                    self._salvar_btn
+                ],
                 width=AppDimensions.FIELD_WIDTH
             )
         ]
@@ -66,6 +73,8 @@ class EditarClienteView(ft.Column):
             self._desativar_btn.bgcolor = self.page.theme.color_scheme.error
             self._ativar_btn.color = self.page.theme.color_scheme.on_primary
             self._ativar_btn.bgcolor = self.page.theme.color_scheme.primary
+            if self._dlg_confirmar_desativacao.actions:
+                self._dlg_confirmar_desativacao.actions[1].bgcolor = self.page.theme.color_scheme.error
         self.view_model.carregar_dados_cliente()
 
     def preencher_formulario(self, cliente: Cliente):
@@ -77,41 +86,40 @@ class EditarClienteView(ft.Column):
         self._ativar_btn.visible = not cliente.ativo
         self.update()
 
-    def _on_salvar_click(self, e):
+    def on_salvar_click(self, e):
         novos_dados = {"nome": self._campo_nome.value, "telefone": self._campo_telefone.value,
                        "endereco": self._campo_endereco.value, "email": self._campo_email.value}
         self.view_model.salvar_alteracoes(novos_dados)
 
-    def mostrar_dialogo_feedback(self, titulo: str, conteudo: str, on_ok_action):
-        def fechar_dialogo_e_agir(e):
-            dialog.open = False
-            self.page.update()
-            if on_ok_action:
-                on_ok_action(e)
-        dialog = ft.CupertinoAlertDialog(
-            title=ft.Text(titulo), content=ft.Text(conteudo),
-            actions=[ft.CupertinoDialogAction(
-                "OK", on_click=fechar_dialogo_e_agir)],
+    def _fechar_dialogo_e_agir(self, e):
+        self.page.dialog.open = False
+        self.page.update()
+        t = Timer(0.1)
+        t.start()
+
+    def mostrar_dialogo_feedback(self, titulo: str, conteudo: str, ):
+        self.page.dialog = ft.AlertDialog(
+            modal=True, title=ft.Text(titulo), content=ft.Text(conteudo),
+            actions=[ft.TextButton(
+                "OK", on_click=lambda e: self._fechar_dialogo_e_agir(e))],
+            actions_alignment=ft.MainAxisAlignment.END,
         )
-        self.page.overlay.append(dialog)
-        dialog.open = True
+        self.page.dialog.open = True
         self.page.update()
 
     def abrir_modal_confirmacao_desativar(self):
-        self.page.overlay.append(self._dlg_confirmar_desativacao)
+        self.page.dialog = self._dlg_confirmar_desativacao
         self._dlg_confirmar_desativacao.open = True
         self.page.update()
 
     def abrir_modal_confirmacao_ativar(self):
-        self.page.overlay.append(self._dlg_confirmar_ativacao)
+        self.page.dialog = self._dlg_confirmar_ativacao
         self._dlg_confirmar_ativacao.open = True
         self.page.update()
 
     def fechar_todos_os_modais(self, e=None):
-        # Itera sobre a cópia da lista de overlays para remover os diálogos
-        for dlg in self.page.overlay[:]:
-            if isinstance(dlg, ft.CupertinoAlertDialog):
-                dlg.open = False
+        if self.page.dialog:
+            self.page.dialog.open = False
         self.page.update()
 
 

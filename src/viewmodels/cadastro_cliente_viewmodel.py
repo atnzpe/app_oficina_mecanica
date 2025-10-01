@@ -2,12 +2,14 @@
 # MÓDULO DO VIEWMODEL DE CADASTRO DE CLIENTE (cadastro_cliente_viewmodel.py)
 #
 # ATUALIZAÇÃO (UX & Robustez):
-#   - Substituída a lógica de feedback por um comando para a View exibir um
-#     CupertinoAlertDialog, que é mais explícito.
+#   - Refatorado para usar o fluxo de feedback com diálogo explícito, passando
+#     a navegação como uma ação de callback para a View.
 #   - Adicionado tratamento de exceções (try...except) para robustez.
 # =================================================================================
-import flet as ft
 import logging
+import sqlite3
+import flet as ft
+
 from src.database import queries
 
 # Configura o logger para este módulo.
@@ -30,25 +32,24 @@ class CadastroClienteViewModel:
     def salvar_cliente(self, e):
         """
         Pega dados da View, valida, e comanda a exibição de um diálogo de feedback.
-        A navegação ocorre após o usuário fechar o diálogo.
+        A navegação ocorre somente após o usuário clicar em "OK" no diálogo.
         """
-        # Garante que a view esteja vinculada para evitar erros.
         if not self._view:
             logging.error(
                 "ViewModel: Ação 'salvar_cliente' chamada sem uma View vinculada.")
             return
 
         try:
+            # 1. SOLICITA OS DADOS DA VIEW
             dados = self._view.obter_dados_formulario()
             nome = dados.get("nome")
             telefone = dados.get("telefone")
             endereco = dados.get("endereco")
 
-            # Validação explícita: Simples é melhor que complexo.
+            # 2. LÓGICA DE VALIDAÇÃO
             if not nome or not nome.strip():
-                self._view.mostrar_dialogo_feedback(
+                return self._view.mostrar_dialogo_feedback(
                     "Erro de Validação", "O campo 'Nome do Cliente' é obrigatório.", None)
-                return
             if not telefone or not telefone.strip():
                 self._view.mostrar_dialogo_feedback(
                     "Erro de Validação", "O campo 'Telefone' é obrigatório.", None)
@@ -58,29 +59,34 @@ class CadastroClienteViewModel:
                     "Erro de Validação", "O campo 'Endereço' é obrigatório.", None)
                 return
 
+            # 3. INTERAÇÃO COM A CAMADA DE DADOS
             logger.info(f"ViewModel: Tentando salvar o novo cliente '{nome}'.")
             novo_cliente = queries.criar_cliente(
                 nome=nome, telefone=telefone, endereco=endereco, email=dados.get(
                     "email")
             )
 
+            # 4. COMANDA A VIEW COM BASE NO RESULTADO
             if novo_cliente:
-                logger.info(
-                    f"Cliente '{nome}' salvo. Exibindo diálogo de sucesso.")
-                # A ação de navegação é passada para a view, que a executará após o "OK".
-                def on_ok_action(_): return self.page.go("/gerir_clientes")
-                self._view.mostrar_dialogo_feedback(
-                    "Sucesso!",
-                    f"Cliente '{novo_cliente.nome}' cadastrado com sucesso!",
-                    on_ok_action
-                )
-            else:
-                # Se a query retornar None, é um erro interno do banco de dados.
-                self._view.mostrar_dialogo_feedback(
-                    "Erro Interno", "Ocorreu um erro ao salvar os dados no banco.", None)
+                logger.info(f"Cadatrado cliente {nome}.")
+                # Prepara a ação de navegação que será executada no futuro.
+                
+                
+                #"""cadastro_cliente_viewmodel.py Função de callback para navegação após o diálogo."""
+                logger.info(f"Indo para pagina gerir clientes.")
+                self.page.go("/gerir_clientes")
+                # Comanda a View para mostrar o diálogo de sucesso, passando a ação.
+                
+
+        except sqlite3.IntegrityError:
+            # Trata o caso específico de cliente duplicado
+            logging.warning(
+                f"Tentativa de cadastrar cliente duplicado: {nome} / {telefone}")
+            self._view.mostrar_dialogo_feedback(
+                "Cliente Duplicado", "Já existe um cliente cadastrado com este nome e telefone.", None)
 
         except Exception as e:
-            # Erros devem ser explícitos e nunca passar silenciosamente.
+            # Trata qualquer outro erro inesperado.
             logging.error(
                 f"Erro inesperado ao salvar cliente: {e}", exc_info=True)
             if self._view:

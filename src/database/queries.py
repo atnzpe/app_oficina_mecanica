@@ -147,18 +147,17 @@ def criar_cliente(nome: str, telefone: str, endereco: str, email: str) -> Client
     Insere um novo cliente no banco de dados. O cliente é criado como 'ativo' por padrão.
     """
     logger.info(f"Executando query para criar cliente: {nome}")
+    
     sql = "INSERT INTO clientes (nome, telefone, endereco, email) VALUES (?, ?, ?, ?)"
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(sql, (nome, telefone, endereco, email))
-            novo_id = cursor.lastrowid
-            conn.commit()
-            logger.info(f"Cliente '{nome}' criado com sucesso com o ID: {novo_id}.")
-            return Cliente(id=novo_id, nome=nome, telefone=telefone, endereco=endereco, email=email, ativo=True)
-    except sqlite3.Error as e:
-        logger.error(f"Erro ao criar cliente '{nome}': {e}", exc_info=True)
-        return None
+    # O bloco `try...except` foi movido para o ViewModel para um tratamento de erro mais específico.
+    # A camada de queries agora apenas executa a operação e permite que a exceção suba.
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(sql, (nome, telefone, endereco, email))
+        novo_id = cursor.lastrowid
+        conn.commit()
+        logger.info(f"Cliente '{nome}' criado com sucesso com o ID: {novo_id}.")
+        return Cliente(id=novo_id, nome=nome, telefone=telefone, endereco=endereco, email=email, ativo=True)
 
 def verificar_existencia_cliente() -> bool:
     """Verifica se existe qualquer cliente ATIVO cadastrado."""

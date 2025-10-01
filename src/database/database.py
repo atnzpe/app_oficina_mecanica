@@ -145,7 +145,8 @@ CREATE_TABLES_SQL = [
         telefone TEXT,
         endereco TEXT,
         email TEXT,
-        ativo BOOLEAN DEFAULT 1
+        ativo BOOLEAN DEFAULT 1,
+        UNIQUE (nome)
     );
     """,
     # --- (As outras tabelas - carros, pecas, etc. - permanecem as mesmas) ---

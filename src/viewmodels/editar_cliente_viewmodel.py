@@ -34,9 +34,10 @@ class EditarClienteViewModel:
                 self.cliente_em_edicao = cliente
                 self._view.preencher_formulario(cliente)
             elif self._view:
-                def on_ok_action(_): return self.page.go("/gerir_clientes")
+                
+                self.page.go("/gerir_clientes")
                 self._view.mostrar_dialogo_feedback(
-                    "Erro", "Cliente não encontrado.", on_ok_action)
+                    "Erro", "Cliente não encontrado.")
         except Exception as e:
             logging.error(
                 f"Erro ao carregar dados do cliente: {e}", exc_info=True)
@@ -52,9 +53,10 @@ class EditarClienteViewModel:
             sucesso = queries.atualizar_cliente(self.cliente_id, novos_dados)
             if self._view:
                 if sucesso:
-                    def on_ok_action(_): return self.page.go("/gerir_clientes")
+                    
                     self._view.mostrar_dialogo_feedback(
-                        "Sucesso!", "Cliente atualizado com sucesso!", on_ok_action)
+                        "Sucesso!", "Cliente atualizado com sucesso!")
+                    self.page.go("/gerir_clientes")
                 else:
                     self._view.mostrar_dialogo_feedback(
                         "Atenção", "Nenhuma alteração foi salva. Os dados podem ser os mesmos.", None)
@@ -67,7 +69,7 @@ class EditarClienteViewModel:
 
     def solicitar_desativacao_cliente(self):
         if self._view:
-            self._view.abrir_modal_confirmacao_desativar()
+            return self._view.abrir_modal_confirmacao_desativar()
 
     def confirmar_desativacao_cliente(self, e):
         """Desativa o cliente e comanda a exibição de um diálogo de feedback."""
@@ -78,9 +80,10 @@ class EditarClienteViewModel:
             if self._view:
                 self._view.fechar_todos_os_modais()
                 if sucesso:
-                    def on_ok_action(_): return self.page.go("/gerir_clientes")
+                    
                     self._view.mostrar_dialogo_feedback(
-                        "Sucesso!", "Cliente desativado com sucesso!", on_ok_action)
+                        "Sucesso!", "Cliente desativado com sucesso!")
+                    self.page.go("/gerir_clientes")
                 else:
                     self._view.mostrar_dialogo_feedback(
                         "Erro", "Erro ao desativar o cliente.", None)
@@ -104,9 +107,10 @@ class EditarClienteViewModel:
             if self._view:
                 self._view.fechar_todos_os_modais()
                 if sucesso:
-                    def on_ok_action(_): return self.page.go("/gerir_clientes")
+                    
                     self._view.mostrar_dialogo_feedback(
-                        "Sucesso!", "Cliente ativado com sucesso!", on_ok_action)
+                        "Sucesso!", "Cliente ativado com sucesso!")
+                    self.page.go("/gerir_clientes")
                 else:
                     self._view.mostrar_dialogo_feedback(
                         "Erro", "Erro ao ativar o cliente.", None)
