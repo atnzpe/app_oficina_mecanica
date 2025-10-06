@@ -126,6 +126,7 @@ class EditarClienteView(ft.Column):
             "View: Fechando diálogo de feedback e agendando ação de callback (se houver).")
         self.fechar_dialogo()
         if self._acao_pos_dialogo:
+            # Usa um Timer para garantir que a UI processe o fechamento do diálogo antes da navegação
             t = Timer(0.1, self._acao_pos_dialogo)
             t.start()
             logger.debug("View: Ação de callback (navegação) agendada.")
@@ -149,9 +150,12 @@ class EditarClienteView(ft.Column):
         logger.info(
             f"View: Exibindo diálogo de confirmação para {'ATIVAÇÃO' if is_activating else 'DESATIVAÇÃO'}.")
 
+        # O ViewModel já contém os dados do cliente em edição
+        nome_cliente = self.view_model.cliente_em_edicao.nome if self.view_model.cliente_em_edicao else "este cliente"
+
         if is_activating:
             self._dialogo_generico.title.value = "Confirmar Ativação"
-            self._dialogo_generico.content.value = "Tem certeza de que deseja reativar este cliente?"
+            self._dialogo_generico.content.value = f"Tem certeza de que deseja reativar o cliente '{nome_cliente}'?"
             self._dialogo_generico.actions = [
                 ft.TextButton("Cancelar", on_click=self.fechar_dialogo),
                 ft.ElevatedButton("Sim, Ativar", on_click=lambda _: self.view_model.confirmar_ativacao_cliente(
@@ -159,7 +163,7 @@ class EditarClienteView(ft.Column):
             ]
         else:
             self._dialogo_generico.title.value = "Confirmar Desativação"
-            self._dialogo_generico.content.value = "Tem certeza de que deseja desativar este cliente?"
+            self._dialogo_generico.content.value = f"Tem certeza de que deseja desativar o cliente '{nome_cliente}'?"
             self._dialogo_generico.actions = [
                 ft.TextButton("Cancelar", on_click=self.fechar_dialogo),
                 ft.ElevatedButton("Sim, Desativar", on_click=lambda _: self.view_model.confirmar_desativacao_cliente(
