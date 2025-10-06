@@ -2,9 +2,10 @@
 # MÓDULO DA VIEW DE GERENCIAMENTO DE CLIENTES (gerir_clientes_view.py)
 #
 # OBJETIVO: Criar a tela para listar e buscar clientes (funcionalidade READ).
-# CORREÇÃO (Dialog Fix):
-#   - Refatorada a exibição do diálogo de confirmação para usar `page.overlay`,
-#     garantindo que o modal sempre apareça de forma confiável sobre a view.
+# ATUALIZAÇÃO (UX):
+#   - A lista agora exibe clientes ativos e inativos.
+#   - Clientes inativos são visualmente diferenciados (opacidade reduzida).
+#   - Adicionado um botão de "reativar" (PERSON_ADD) para clientes inativos.
 # =================================================================================
 import flet as ft
 from src.viewmodels.gerir_clientes_viewmodel import GerirClientesViewModel
@@ -22,20 +23,12 @@ class GerirClientesView(ft.Column):
     """
 
     def __init__(self, page: ft.Page):
-        # Chama o construtor da classe pai (ft.Column).
         super().__init__()
-
-        # Armazena a referência da página principal do Flet.
         self.page = page
-
-        # Instancia e vincula o ViewModel correspondente.
         self.view_model = GerirClientesViewModel(page)
         self.view_model.vincular_view(self)
-
-        # O evento on_mount é atribuído para carregar os dados de forma segura.
         self.on_mount = self.did_mount
 
-        # --- Componentes Visuais ---
         self._campo_pesquisa = ft.TextField(
             label="Pesquisar por Nome, Telefone ou Placa do Carro",
             on_submit=lambda e: self.view_model.pesquisar_cliente(
@@ -43,31 +36,21 @@ class GerirClientesView(ft.Column):
             prefix_icon=ft.Icons.SEARCH,
             border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS)
         )
-
-        # ListView para exibir os resultados da pesquisa de clientes.
         self._resultados_pesquisa_listview = ft.ListView(
             expand=True, spacing=10)
 
-        # --- Diálogo de Confirmação (será gerenciado pela página) ---
-        # O diálogo é criado uma vez e reutilizado.
+        # Diálogo de Confirmação genérico.
         self._confirm_dialog = ft.AlertDialog(
             modal=True,
             title=ft.Text("Confirmar Ação"),
-            content=ft.Text(),  # O conteúdo será preenchido dinamicamente
+            content=ft.Text(),
             actions=[
-                ft.TextButton(
-                    "Cancelar", on_click=self.fechar_dialogo), # Evento de clique para fechar
-                ft.ElevatedButton(
-                    "Sim, Desativar",
-                    # O clique aqui chama diretamente o método do ViewModel.
-                    on_click=lambda _: self.view_model.confirmar_desativacao(),
-                    bgcolor=ft.Colors.RED_700
-                )
+                ft.TextButton("Cancelar", on_click=self.fechar_dialogo),
+                ft.ElevatedButton("Confirmar") # Ação e texto serão definidos dinamicamente
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
 
-        # A lista de controles que compõem a view.
         self.controls = [
             self._campo_pesquisa,
             ft.Divider(),
@@ -75,15 +58,8 @@ class GerirClientesView(ft.Column):
         ]
 
     def did_mount(self):
-        """
-        Este método é chamado pelo evento on_mount. É o local seguro para
-        iniciar o carregamento de dados que atualizam a UI.
-        """
+        """Método chamado pelo Flet quando a view é montada na página."""
         logging.info("GerirClientesView foi montada. Carregando clientes...")
-        # Atualiza a cor do botão do diálogo com base no tema.
-        if self._confirm_dialog.actions:
-             self._confirm_dialog.actions[1].bgcolor = ft.Colors.RED_700 if self.page.theme_mode == ft.ThemeMode.LIGHT else ft.Colors.RED_400
-        # Comanda o ViewModel a carregar a lista inicial de clientes.
         self.view_model.carregar_clientes_iniciais()
 
     def atualizar_lista_resultados(self, clientes: List[Cliente]):
@@ -95,11 +71,32 @@ class GerirClientesView(ft.Column):
                 ft.Text("Nenhum cliente encontrado."))
         else:
             for cliente in clientes:
+                # --- LÓGICA DE EXIBIÇÃO CONDICIONAL ---
+                
+                # Se o cliente estiver inativo, o ícone de ação será para reativar.
+                if not cliente.ativo:
+                    action_icon = ft.IconButton(
+                        icon=ft.Icons.PERSON_ADD,
+                        tooltip="Reativar Cliente",
+                        on_click=lambda e, c=cliente: self.view_model.solicitar_ativacao(c.id, c.nome),
+                        icon_color=ft.Colors.GREEN_400,
+                    )
+                # Se estiver ativo, o ícone será para desativar.
+                else:
+                    action_icon = ft.IconButton(
+                        icon=ft.Icons.PERSON_OFF,
+                        tooltip="Desativar Cliente",
+                        on_click=lambda e, c=cliente: self.view_model.solicitar_desativacao(c.id, c.nome),
+                        icon_color=ft.Colors.RED_400,
+                    )
+
                 list_item = ft.Container(
                     on_click=lambda _, c=cliente: self.view_model.editar_cliente(c.id),
                     border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS),
                     ink=True,
                     padding=ft.padding.symmetric(vertical=8, horizontal=12),
+                    # Clientes inativos terão uma opacidade menor para diferenciação visual.
+                    opacity=1.0 if cliente.ativo else 0.5,
                     content=ft.Row(
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         controls=[
@@ -114,14 +111,7 @@ class GerirClientesView(ft.Column):
                             ft.Row(
                                 spacing=0,
                                 controls=[
-                                    ft.IconButton(
-                                        icon=ft.Icons.PERSON_OFF,
-                                        tooltip="Desativar Cliente",
-                                        # O evento de clique é capturado pelo 'e' (evento)
-                                        # para evitar que o clique se propague para o Container pai.
-                                        on_click=lambda e, c=cliente: self.view_model.solicitar_desativacao(c.id, c.nome),
-                                        icon_color=ft.Colors.RED_400,
-                                    ),
+                                    action_icon, # Ícone de ação (ativar/desativar)
                                     ft.Icon(ft.Icons.CHEVRON_RIGHT),
                                 ]
                             )
@@ -131,24 +121,28 @@ class GerirClientesView(ft.Column):
                 self._resultados_pesquisa_listview.controls.append(list_item)
         self.update()
 
-    # --- MÉTODOS DA VIEW (CORRIGIDOS) ---
+    # --- MÉTODOS DA VIEW ---
 
-    def mostrar_dialogo_confirmacao(self, nome_cliente: str):
-        """
-        Exibe o diálogo de confirmação adicionando-o à camada de sobreposição (overlay).
-        """
-        # Garante que o diálogo não seja adicionado múltiplas vezes à overlay.
-        if self._confirm_dialog not in self.page.overlay:
-            self.page.overlay.append(self._confirm_dialog)
+    def mostrar_dialogo_confirmacao(self, nome_cliente: str, is_activating: bool):
+        """Exibe um diálogo para confirmar a ativação ou desativação de um cliente."""
+        self.page.overlay.append(self._confirm_dialog)
         
-        # Personaliza a mensagem do diálogo.
-        self._confirm_dialog.content.value = f"Tem certeza de que deseja desativar o cliente '{nome_cliente}'?\nEsta ação o removerá das listas ativas."
-        # Abre o diálogo.
+        # Personaliza o diálogo com base na ação (ativar ou desativar).
+        if is_activating:
+            self._confirm_dialog.content.value = f"Tem certeza de que deseja reativar o cliente '{nome_cliente}'?"
+            self._confirm_dialog.actions[1].text = "Sim, Reativar"
+            self._confirm_dialog.actions[1].on_click = lambda _: self.view_model.confirmar_ativacao()
+            self._confirm_dialog.actions[1].bgcolor = ft.Colors.GREEN_700
+        else:
+            self._confirm_dialog.content.value = f"Tem certeza de que deseja desativar o cliente '{nome_cliente}'?\nEsta ação o removerá das listas ativas."
+            self._confirm_dialog.actions[1].text = "Sim, Desativar"
+            self._confirm_dialog.actions[1].on_click = lambda _: self.view_model.confirmar_desativacao()
+            self._confirm_dialog.actions[1].bgcolor = ft.Colors.RED_700
+            
         self._confirm_dialog.open = True
-        # Atualiza a página para exibir o diálogo.
         self.page.update()
 
-    def fechar_dialogo(self, e=None): # Adicionado 'e=None' para ser chamado por botões
+    def fechar_dialogo(self, e=None):
         """Fecha o diálogo de confirmação."""
         if self._confirm_dialog in self.page.overlay:
             self._confirm_dialog.open = False
