@@ -1,10 +1,9 @@
 # =================================================================================
 # MÓDULO DO VIEWMODEL DE EDIÇÃO DE CLIENTE (editar_cliente_viewmodel.py)
 #
-# ATUALIZAÇÃO (Robustez):
-#   - Adicionado tratamento de exceções (try...except) em todos os métodos que
-#     interagem com o banco de dados para garantir que a aplicação não
-#     trave em caso de falha e exiba um feedback claro para o usuário.
+# ATUALIZAÇÃO (Robustez e UX):
+#   - O fluxo de navegação foi refatorado para ocorrer apenas APÓS o usuário
+#     fechar o diálogo de feedback, evitando travamentos na interface.
 # =================================================================================
 import flet as ft
 import logging
@@ -34,10 +33,10 @@ class EditarClienteViewModel:
                 self.cliente_em_edicao = cliente
                 self._view.preencher_formulario(cliente)
             elif self._view:
-                
-                self.page.go("/gerir_clientes")
+                # Se o cliente não for encontrado, mostra um feedback e navega de volta.
+                def acao_navegacao(): return self.page.go("/gerir_clientes")
                 self._view.mostrar_dialogo_feedback(
-                    "Erro", "Cliente não encontrado.")
+                    "Erro", "Cliente não encontrado.", acao_navegacao)
         except Exception as e:
             logging.error(
                 f"Erro ao carregar dados do cliente: {e}", exc_info=True)
@@ -52,11 +51,11 @@ class EditarClienteViewModel:
                 f"ViewModel: salvando alterações para o cliente ID {self.cliente_id}")
             sucesso = queries.atualizar_cliente(self.cliente_id, novos_dados)
             if self._view:
+                # Define a ação de navegação que será executada após o diálogo.
+                def acao_navegacao(): return self.page.go("/gerir_clientes")
                 if sucesso:
-                    
                     self._view.mostrar_dialogo_feedback(
-                        "Sucesso!", "Cliente atualizado com sucesso!")
-                    self.page.go("/gerir_clientes")
+                        "Sucesso!", "Cliente atualizado com sucesso!", acao_navegacao)
                 else:
                     self._view.mostrar_dialogo_feedback(
                         "Atenção", "Nenhuma alteração foi salva. Os dados podem ser os mesmos.", None)
@@ -69,7 +68,7 @@ class EditarClienteViewModel:
 
     def solicitar_desativacao_cliente(self):
         if self._view:
-            return self._view.abrir_modal_confirmacao_desativar()
+            self._view.abrir_modal_confirmacao_desativar()
 
     def confirmar_desativacao_cliente(self, e):
         """Desativa o cliente e comanda a exibição de um diálogo de feedback."""
@@ -79,11 +78,10 @@ class EditarClienteViewModel:
             sucesso = queries.desativar_cliente_por_id(self.cliente_id)
             if self._view:
                 self._view.fechar_todos_os_modais()
+                def acao_navegacao(): return self.page.go("/gerir_clientes")
                 if sucesso:
-                    
                     self._view.mostrar_dialogo_feedback(
-                        "Sucesso!", "Cliente desativado com sucesso!")
-                    self.page.go("/gerir_clientes")
+                        "Sucesso!", "Cliente desativado com sucesso!", acao_navegacao)
                 else:
                     self._view.mostrar_dialogo_feedback(
                         "Erro", "Erro ao desativar o cliente.", None)
@@ -106,11 +104,10 @@ class EditarClienteViewModel:
             sucesso = queries.ativar_cliente_por_id(self.cliente_id)
             if self._view:
                 self._view.fechar_todos_os_modais()
+                def acao_navegacao(): return self.page.go("/gerir_clientes")
                 if sucesso:
-                    
                     self._view.mostrar_dialogo_feedback(
-                        "Sucesso!", "Cliente ativado com sucesso!")
-                    self.page.go("/gerir_clientes")
+                        "Sucesso!", "Cliente ativado com sucesso!", acao_navegacao)
                 else:
                     self._view.mostrar_dialogo_feedback(
                         "Erro", "Erro ao ativar o cliente.", None)

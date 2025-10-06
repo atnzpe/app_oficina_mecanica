@@ -1,18 +1,18 @@
 # =================================================================================
 # MÓDULO DA VIEW DE EDIÇÃO DE CLIENTE (editar_cliente_view.py)
 #
-# ATUALIZAÇÃO (Bug Fix & UX):
-#   - Adicionado botão "Cancelar".
-#   - Corrigido o fluxo de navegação pós-diálogo usando um Timer.
-#   - Padronizado o uso de AlertDialog para máxima estabilidade.
+# ATUALIZAÇÃO (UX & Robustez):
+#   - O método `mostrar_dialogo_feedback` agora aceita uma ação de callback
+#     opcional para executar a navegação de forma segura após o fechamento
+#     do diálogo, prevenindo travamentos.
 # =================================================================================
 import flet as ft
 import logging
 from src.viewmodels.editar_cliente_viewmodel import EditarClienteViewModel
 from src.models.models import Cliente
 from src.styles.style import AppDimensions, AppFonts
-from threading import Timer  # Importa o Timer
-
+from threading import Timer
+from typing import Callable, Optional # Importa Callable e Optional para a tipagem do callback
 
 class EditarClienteView(ft.Column):
     def __init__(self, page: ft.Page, cliente_id: int):
@@ -21,6 +21,9 @@ class EditarClienteView(ft.Column):
         self.view_model = EditarClienteViewModel(page, cliente_id)
         self.view_model.vincular_view(self)
         self.on_mount = self.did_mount
+
+        # Atributo para armazenar a ação de callback (navegação).
+        self._acao_pos_dialogo: Optional[Callable[[], None]] = None
 
         self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
         self.alignment = ft.MainAxisAlignment.CENTER
@@ -66,15 +69,15 @@ class EditarClienteView(ft.Column):
         ]
 
     def did_mount(self):
-        logging.info(
-            "EditarClienteView foi montada. Aplicando cores do tema e carregando dados.")
+        logging.info("EditarClienteView foi montada. Aplicando cores do tema e carregando dados.")
+        # Aplica cores do tema aos botões de ação
         if self.page.theme:
-            self._desativar_btn.color = self.page.theme.color_scheme.on_error
             self._desativar_btn.bgcolor = self.page.theme.color_scheme.error
-            self._ativar_btn.color = self.page.theme.color_scheme.on_primary
-            self._ativar_btn.bgcolor = self.page.theme.color_scheme.primary
+            self._ativar_btn.bgcolor = ft.colors.GREEN_700
             if self._dlg_confirmar_desativacao.actions:
                 self._dlg_confirmar_desativacao.actions[1].bgcolor = self.page.theme.color_scheme.error
+            if self._dlg_confirmar_ativacao.actions:
+                self._dlg_confirmar_ativacao.actions[1].bgcolor = ft.colors.GREEN_700
         self.view_model.carregar_dados_cliente()
 
     def preencher_formulario(self, cliente: Cliente):
@@ -92,16 +95,25 @@ class EditarClienteView(ft.Column):
         self.view_model.salvar_alteracoes(novos_dados)
 
     def _fechar_dialogo_e_agir(self, e):
+        """
+        Fecha o diálogo e, se houver uma ação de callback, a executa com um atraso.
+        """
         self.page.dialog.open = False
         self.page.update()
-        t = Timer(0.1)
-        t.start()
+        if self._acao_pos_dialogo:
+            # Usa um Timer para garantir que a UI processe o fechamento do diálogo antes da navegação
+            t = Timer(0.1, self._acao_pos_dialogo)
+            t.start()
 
-    def mostrar_dialogo_feedback(self, titulo: str, conteudo: str, ):
+    def mostrar_dialogo_feedback(self, titulo: str, conteudo: str, acao_callback: Optional[Callable[[], None]] = None):
+        """
+        Exibe um AlertDialog para feedback e armazena a ação de callback.
+        """
+        self._acao_pos_dialogo = acao_callback
         self.page.dialog = ft.AlertDialog(
             modal=True, title=ft.Text(titulo), content=ft.Text(conteudo),
             actions=[ft.TextButton(
-                "OK", on_click=lambda e: self._fechar_dialogo_e_agir(e))],
+                "OK", on_click=self._fechar_dialogo_e_agir)],
             actions_alignment=ft.MainAxisAlignment.END,
         )
         self.page.dialog.open = True
