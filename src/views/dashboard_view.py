@@ -53,7 +53,7 @@ class DashboardView(ft.Column):
                     self._criar_sub_item(
                         "Clientes", ft.Icons.PEOPLE_OUTLINED, "/gerir_clientes"),
                     self._criar_sub_item(
-                        "Veículos", ft.Icons.DIRECTIONS_CAR_OUTLINED, "/gerir_veiculos"),
+                        "Veículos", ft.Icons.DIRECTIONS_CAR_OUTLINED, "/gerir_carros"),
                     self._criar_sub_item(
                         "Peças", ft.Icons.SETTINGS_INPUT_COMPONENT_OUTLINED, "/gerir_pecas"),
                     self._criar_sub_item(

@@ -64,6 +64,7 @@ class Carro:
         cor: Optional[str],
         placa: str,
         cliente_id: int,
+        ativo: bool = True,
     ):
         self.id: int = id
         self.modelo: str = modelo
@@ -71,7 +72,7 @@ class Carro:
         self.cor: Optional[str] = cor
         self.placa: str = placa
         self.cliente_id: int = cliente_id
-
+        self.ativo: bool = ativo
 
 class Peca:
     """Representa uma peça ou item de estoque."""

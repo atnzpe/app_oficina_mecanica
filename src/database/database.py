@@ -158,6 +158,8 @@ CREATE_TABLES_SQL = [
         cor TEXT,
         placa TEXT NOT NULL UNIQUE,
         cliente_id INTEGER,
+        ativo BOOLEAN DEFAULT 1,
+        UNIQUE (placa),
         FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
     );
     """,

@@ -227,8 +227,6 @@ def obter_cliente_por_id(cliente_id: int) -> Cliente | None:
         return None
 
 
-
-
 def buscar_clientes_por_termo(termo: str) -> List[Cliente]:
     """Busca clientes (ativos e inativos) no banco de dados por nome, telefone ou placa do carro."""
     logger.debug(f"Executando busca de clientes pelo termo: '{termo}'")
@@ -326,74 +324,135 @@ def ativar_cliente_por_id(cliente_id: int) -> bool:
 
 
 def criar_carro(modelo: str, ano: int, cor: str, placa: str, cliente_id: int) -> Carro | None:
-    """Insere um novo carro no banco de dados."""
+    """Insere um novo carro no banco de dados. O carro é criado como 'ativo' por padrão."""
     logger.info(
         f"Executando query para criar carro: {modelo} - Placa: {placa}")
     sql = "INSERT INTO carros (modelo, ano, cor, placa, cliente_id) VALUES (?, ?, ?, ?, ?)"
+    # A exceção de integridade (placa duplicada) será tratada no ViewModel.
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(sql, (modelo, ano, cor, placa, cliente_id))
+        novo_id = cursor.lastrowid
+        conn.commit()
+        logger.info(
+            f"Carro '{modelo}' com placa '{placa}' criado com sucesso com o ID: {novo_id}.")
+        return Carro(id=novo_id, modelo=modelo, ano=ano, cor=cor, placa=placa, cliente_id=cliente_id, ativo=True)
+
+# --- NOVAS FUNÇÕES ---
+
+
+def obter_carro_por_id(carro_id: int) -> dict | None:
+    """
+    Busca um único carro pelo seu ID, juntando o nome do cliente.
+    Retorna um dicionário para facilitar o uso no ViewModel.
+    """
+    logger.debug(f"Buscando carro e proprietário pelo ID do carro: {carro_id}")
+    sql = """
+        SELECT car.*, cli.nome as nome_cliente
+        FROM carros car
+        JOIN clientes cli ON car.cliente_id = cli.id
+        WHERE car.id = ?
+    """
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(sql, (modelo, ano, cor, placa, cliente_id))
-            novo_id = cursor.lastrowid
-            conn.commit()
-            logger.info(
-                f"Carro '{modelo}' com placa '{placa}' criado com sucesso com o ID: {novo_id}.")
-            return Carro(id=novo_id, modelo=modelo, ano=ano, cor=cor, placa=placa, cliente_id=cliente_id)
-    except sqlite3.Error as e:
-        logger.error(
-            f"Erro ao criar carro '{modelo}' com placa '{placa}': {e}", exc_info=True)
+            result = cursor.execute(sql, (carro_id,)).fetchone()
+            return dict(result) if result else None
+    except Exception as e:
+        logging.error(
+            f"Erro ao obter carro por ID {carro_id}: {e}", exc_info=True)
         return None
 
 
-def obter_carros_por_cliente_id(cliente_id: int) -> List[Carro]:
-    """Busca os carros de um cliente pelo ID. Retorna uma lista de objetos `Carro`."""
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT id, modelo, ano, cor, placa, cliente_id FROM carros WHERE cliente_id = ?",
-            (cliente_id,),
-        )
-    return [Carro(**row) for row in cursor.fetchall()]
-
-
-def obter_carros_por_cliente(cliente_id: int) -> List[Carro]:
-    """Retorna uma lista de carros de um cliente específico."""
-    logger.debug(
-        f"Executando query para obter carros do cliente ID: {cliente_id}")
+def buscar_carros_por_termo(termo: str) -> List[dict]:
+    """
+    Busca carros (ativos e inativos) por modelo, placa ou nome do proprietário.
+    Retorna uma lista de dicionários com os dados do carro e do cliente.
+    """
+    logger.debug(f"Executando busca de carros pelo termo: '{termo}'")
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                "SELECT * FROM carros WHERE cliente_id = ?", (cliente_id,))
-            return [Carro(**row) for row in cursor.fetchall()]
+            query = """
+                SELECT
+                    car.id, car.modelo, car.placa, car.ativo,
+                    cli.nome as nome_cliente
+                FROM carros car
+                JOIN clientes cli ON car.cliente_id = cli.id
+                WHERE car.modelo LIKE ? OR car.placa LIKE ? OR cli.nome LIKE ?
+                ORDER BY cli.nome, car.modelo
+            """
+            like_termo = f"%{termo}%"
+            cursor.execute(query, (like_termo, like_termo, like_termo))
+            # Retorna uma lista de dicionários para facilitar a manipulação na View/ViewModel
+            return [dict(row) for row in cursor.fetchall()]
     except sqlite3.Error as e:
-        logger.error(
-            f"Erro ao obter carros do cliente {cliente_id}: {e}", exc_info=True)
+        logger.error(f"Erro ao buscar carros por termo: {e}", exc_info=True)
         return []
 
 
-def atualizar_carro(carro_id: int, cliente_id: int) -> bool:
-    """Atualiza o dono (cliente_id) de um carro no banco de dados."""
-    logger.info(
-        f"Executando query para atualizar dono do carro ID {carro_id} para cliente ID {cliente_id}.")
+def atualizar_carro(carro_id: int, novos_dados: dict) -> bool:
+    """Atualiza todos os dados de um carro específico no banco de dados."""
+    logger.info(f"Executando query para atualizar carro ID: {carro_id}")
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "UPDATE carros SET cliente_id = ? WHERE id = ?", (
-                    cliente_id, carro_id)
+                """UPDATE carros SET
+                    modelo = ?, ano = ?, cor = ?, placa = ?, cliente_id = ?
+                   WHERE id = ?""",
+                (
+                    novos_dados["modelo"],
+                    novos_dados["ano"],
+                    novos_dados["cor"],
+                    novos_dados["placa"],
+                    novos_dados["cliente_id"],
+                    carro_id
+                )
             )
             conn.commit()
             return cursor.rowcount > 0
     except sqlite3.Error as e:
         logger.error(
-            f"Erro ao atualizar o carro no banco de dados: {e}", exc_info=True)
+            f"Erro ao atualizar carro ID {carro_id}: {e}", exc_info=True)
+        # Levanta a exceção para ser tratada no ViewModel (ex: placa duplicada)
+        raise
+
+
+def desativar_carro_por_id(carro_id: int) -> bool:
+    """Realiza a exclusão lógica de um carro, setando seu status para 'ativo = 0'."""
+    logger.info(f"Executando query para desativar carro ID: {carro_id}")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE carros SET ativo = 0 WHERE id = ?", (carro_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(
+            f"Erro ao desativar carro ID {carro_id}: {e}", exc_info=True)
         return False
 
+
+def ativar_carro_por_id(carro_id: int) -> bool:
+    """Reativa um carro que foi desativado, setando seu status para 'ativo = 1'."""
+    logger.info(f"Executando query para ATIVAR carro ID: {carro_id}")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE carros SET ativo = 1 WHERE id = ?", (carro_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao ativar carro ID {carro_id}: {e}", exc_info=True)
+        return False
 
 # =================================================================================
 # QUERIES DE PEÇAS E ESTOQUE
 # =================================================================================
+
 
 def obter_pecas() -> List[Peca]:
     """Retorna uma lista de todas as peças."""
