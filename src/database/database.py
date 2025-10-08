@@ -137,6 +137,18 @@ CREATE_TABLES_SQL = [
         FOREIGN KEY (id_estabelecimento) REFERENCES estabelecimentos(id)
     );
     """,
+    
+    #Tabela de Mecânicos: permanece a mesma, para os funcionários da oficina.
+     """
+    CREATE TABLE IF NOT EXISTS mecanicos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        cpf TEXT UNIQUE,
+        especialidade TEXT,
+        ativo BOOLEAN DEFAULT 1
+    );
+    """,    
+    
     # Tabela de Clientes: permanece a mesma, para os clientes da oficina.
     """
     CREATE TABLE IF NOT EXISTS clientes (
