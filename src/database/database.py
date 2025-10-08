@@ -172,7 +172,9 @@ CREATE_TABLES_SQL = [
         descricao TEXT,
         preco_compra REAL NOT NULL,
         preco_venda REAL NOT NULL,
-        quantidade_em_estoque INTEGER NOT NULL CHECK (quantidade_em_estoque >= 0)
+        quantidade_em_estoque INTEGER NOT NULL CHECK (quantidade_em_estoque >= 0),
+        ativo BOOLEAN DEFAULT 1,
+        UNIQUE (nome, referencia) -- Garante que a combinação de nome e referência seja única
     );
     """,
     """

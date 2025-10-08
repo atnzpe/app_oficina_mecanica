@@ -87,6 +87,7 @@ class Peca:
         preco_compra: float,
         preco_venda: float,
         quantidade_em_estoque: int,
+        ativo: bool = True,
     ):
         self.id: int = id
         self.nome: str = nome
@@ -96,3 +97,5 @@ class Peca:
         self.preco_compra: float = preco_compra
         self.preco_venda: float = preco_venda
         self.quantidade_em_estoque: int = quantidade_em_estoque
+        # Flag para indicar se a peça está ativa (1) ou desativada (0).
+        self.ativo: bool = ativo
