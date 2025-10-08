@@ -30,8 +30,11 @@ from src.views.gerir_carros_view import GerirCarrosViewFactory
 from src.views.cadastro_carro_view import CadastroCarroViewFactory
 from src.views.editar_carro_view import EditarCarroViewFactory
 from src.views.gerir_pecas_view import GerirPecasViewFactory
-from src.views.cadastro_peca_view import CadastroPecaViewFactory # -> Será criado depois
-from src.views.editar_peca_view import EditarPecaViewFactory # -> Será criado depois
+from src.views.cadastro_peca_view import CadastroPecaViewFactory
+from src.views.editar_peca_view import EditarPecaViewFactory
+from src.views.gerir_mecanicos_view import GerirMecanicosViewFactory
+# from src.views.cadastro_mecanico_view import CadastroMecanicoViewFactory # -> Será criado depois
+# from src.views.editar_mecanico_view import EditarMecanicoViewFactory # -> Será criado depois
 
 # Importações de Serviços e Banco de Dados
 from src.services.task_queue_service import processar_fila_db
@@ -85,6 +88,7 @@ def main(page: ft.Page):
         edit_cliente_route = re.match(r"/editar_cliente/(\d+)", page.route)
         edit_carro_route = re.match(r"/editar_carro/(\d+)", page.route)
         edit_peca_route = re.match(r"/editar_peca/(\d+)", page.route)
+        edit_mecanico_route = re.match(r"/editar_mecanico/(\d+)", page.route)
         page.views.clear()
 
         # Mapeamento de rotas para as View Factories
@@ -129,10 +133,20 @@ def main(page: ft.Page):
         elif edit_peca_route: # -> Rota ativada
             peca_id = int(edit_peca_route.group(1))
             page.views.append(EditarPecaViewFactory(page, peca_id=peca_id))
+            
+        # --- NOVAS ROTAS DE MECÂNICOS ---
+        elif page.route == "/gerir_mecanicos":
+            page.views.append(GerirMecanicosViewFactory(page))
+        # elif page.route == "/cadastro_mecanico":
+            # page.views.append(CadastroMecanicoViewFactory(page))
+        # elif edit_mecanico_route:
+            # mecanico_id = int(edit_mecanico_route.group(1))
+            # page.views.append(EditarMecanicoViewFactory(page, mecanico_id=mecanico_id))
+            
         elif page.route == "/gerir_servicos":
             page.views.append(PlaceholderViewFactory(page, "Gerenciar Serviços"))
-        elif page.route == "/gerir_mecanicos":
-            page.views.append(PlaceholderViewFactory(page, "Gerenciar Mecânicos"))
+            
+        
             
         # --- Rotas de Serviços ---
         elif page.route == "/nova_os":

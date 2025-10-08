@@ -27,7 +27,7 @@ from src.database.database import get_db_connection
 # Importa as classes de modelo para que as funções possam retornar objetos
 # fortemente tipados (ex: uma lista de Clientes), o que melhora a clareza
 # e a segurança do código nos ViewModels.
-from src.models.models import Usuario, Cliente, Carro, Peca, Estabelecimento
+from src.models.models import Usuario, Cliente, Carro, Peca, Estabelecimento, Mecanico
 
 # --- CONFIGURAÇÃO DO LOGGER ---
 logger = logging.getLogger("DB_QUERIES")
@@ -155,6 +155,98 @@ def complete_onboarding(user_id: int, user_name: str, establishment_name: str):
     finally:
         if conn:
             conn.close()
+
+# =================================================================================
+# QUERIES DE MECÂNICOS (NOVO)
+# =================================================================================
+
+def criar_mecanico(nome: str, cpf: str, especialidade: str) -> Mecanico | None:
+    """Insere um novo mecânico no banco de dados."""
+    logger.info(f"Executando query para criar mecânico: {nome}")
+    sql = "INSERT INTO mecanicos (nome, cpf, especialidade) VALUES (?, ?, ?)"
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, (nome, cpf, especialidade))
+            novo_id = cursor.lastrowid
+            conn.commit()
+            logger.info(f"Mecânico '{nome}' criado com sucesso com o ID: {novo_id}.")
+            return Mecanico(id=novo_id, nome=nome, cpf=cpf, especialidade=especialidade, ativo=True)
+    except sqlite3.Error:
+        logger.error(f"Erro ao criar mecânico '{nome}'.", exc_info=True)
+        raise # Levanta a exceção para ser tratada no ViewModel (ex: CPF duplicado)
+
+def buscar_mecanicos_por_termo(termo: str) -> List[Mecanico]:
+    """Busca mecânicos (ativos e inativos) por nome, CPF ou especialidade."""
+    logger.debug(f"Executando busca de mecânicos pelo termo: '{termo}'")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            query = """
+                SELECT * FROM mecanicos
+                WHERE nome LIKE ? OR cpf LIKE ? OR especialidade LIKE ?
+                ORDER BY nome
+            """
+            like_termo = f"%{termo}%"
+            cursor.execute(query, (like_termo, like_termo, like_termo))
+            return [Mecanico(**row) for row in cursor.fetchall()]
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao buscar mecânicos por termo: {e}", exc_info=True)
+        return []
+
+def obter_mecanico_por_id(mecanico_id: int) -> Mecanico | None:
+    """Busca um único mecânico pelo seu ID."""
+    logger.debug(f"Buscando mecânico pelo ID: {mecanico_id}")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            result = cursor.execute("SELECT * FROM mecanicos WHERE id = ?", (mecanico_id,)).fetchone()
+            return Mecanico(**result) if result else None
+    except Exception as e:
+        logging.error(f"Erro ao obter mecânico por ID {mecanico_id}: {e}", exc_info=True)
+        return None
+
+def atualizar_mecanico(mecanico_id: int, nome: str, cpf: str, especialidade: str) -> bool:
+    """Atualiza os dados de um mecânico específico."""
+    logger.info(f"Executando query para atualizar mecânico ID: {mecanico_id}")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE mecanicos SET nome = ?, cpf = ?, especialidade = ? WHERE id = ?",
+                (nome, cpf, especialidade, mecanico_id)
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error:
+        logger.error(f"Erro ao atualizar mecânico ID {mecanico_id}:", exc_info=True)
+        raise
+
+def desativar_mecanico_por_id(mecanico_id: int) -> bool:
+    """Realiza a exclusão lógica de um mecânico."""
+    logger.info(f"Executando query para desativar mecânico ID: {mecanico_id}")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE mecanicos SET ativo = 0 WHERE id = ?", (mecanico_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao desativar mecânico ID {mecanico_id}: {e}", exc_info=True)
+        return False
+
+def ativar_mecanico_por_id(mecanico_id: int) -> bool:
+    """Reativa um mecânico."""
+    logger.info(f"Executando query para ATIVAR mecânico ID: {mecanico_id}")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE mecanicos SET ativo = 1 WHERE id = ?", (mecanico_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao ativar mecânico ID {mecanico_id}: {e}", exc_info=True)
+        return False
 
 # =================================================================================
 # QUERIES DE CLIENTES E CARROS
