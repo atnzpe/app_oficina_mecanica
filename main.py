@@ -33,7 +33,7 @@ from src.views.gerir_pecas_view import GerirPecasViewFactory
 from src.views.cadastro_peca_view import CadastroPecaViewFactory
 from src.views.editar_peca_view import EditarPecaViewFactory
 from src.views.gerir_mecanicos_view import GerirMecanicosViewFactory
-# from src.views.cadastro_mecanico_view import CadastroMecanicoViewFactory # -> Será criado depois
+from src.views.cadastro_mecanico_view import CadastroMecanicoViewFactory # -> Será criado depois
 # from src.views.editar_mecanico_view import EditarMecanicoViewFactory # -> Será criado depois
 
 # Importações de Serviços e Banco de Dados
@@ -137,8 +137,8 @@ def main(page: ft.Page):
         # --- NOVAS ROTAS DE MECÂNICOS ---
         elif page.route == "/gerir_mecanicos":
             page.views.append(GerirMecanicosViewFactory(page))
-        # elif page.route == "/cadastro_mecanico":
-            # page.views.append(CadastroMecanicoViewFactory(page))
+        elif page.route == "/cadastro_mecanico":
+            page.views.append(CadastroMecanicoViewFactory(page))
         # elif edit_mecanico_route:
             # mecanico_id = int(edit_mecanico_route.group(1))
             # page.views.append(EditarMecanicoViewFactory(page, mecanico_id=mecanico_id))
