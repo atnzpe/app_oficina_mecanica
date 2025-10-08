@@ -468,6 +468,36 @@ def obter_pecas() -> List[Peca]:
         return []
 
 # --- NOVAS FUNÇÕES ---
+def criar_peca(dados: dict) -> Peca | None:
+    """
+    Insere uma nova peça no banco de dados. A peça é criada como 'ativa' por padrão.
+    :param dados: Um dicionário contendo todos os campos da peça.
+    :return: O objeto Peca recém-criado ou None em caso de falha.
+    """
+    logger.info(f"Executando query para criar a peça: {dados.get('nome')}")
+    sql = """
+        INSERT INTO pecas (
+            nome, referencia, fabricante, descricao, preco_compra,
+            preco_venda, quantidade_em_estoque
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, (
+                dados['nome'], dados['referencia'], dados['fabricante'],
+                dados['descricao'], dados['preco_compra'], dados['preco_venda'],
+                dados['quantidade_em_estoque']
+            ))
+            novo_id = cursor.lastrowid
+            conn.commit()
+            logger.info(f"Peça '{dados.get('nome')}' criada com sucesso com o ID: {novo_id}.")
+            # Retorna uma instância do modelo Peca com os dados inseridos
+            return Peca(id=novo_id, ativo=True, **dados)
+    except sqlite3.Error as e:
+        # A exceção (ex: UNIQUE constraint) será tratada no ViewModel
+        logger.error(f"Erro ao criar a peça '{dados.get('nome')}': {e}", exc_info=True)
+        raise
 
 def buscar_pecas_por_termo(termo: str) -> List[Peca]:
     """
