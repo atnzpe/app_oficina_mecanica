@@ -14,16 +14,20 @@
 # =================================================================================
 from typing import Optional
 
+
 class Estabelecimento:
     """Representa um estabelecimento (oficina) no sistema."""
+
     def __init__(self, id: int, nome: str):
         self.id: int = id
         self.nome: str = nome
+
 
 class Usuario:
     """Representa um usuário do sistema."""
     # --- CONSTRUTOR CORRIGIDO ---
     # Adicionado `id_estabelecimento: Optional[int]` para corresponder à tabela.
+
     def __init__(self, id: int, nome: str, senha: str, perfil: str, id_estabelecimento: Optional[int]):
         self.id: int = id
         self.nome: str = nome
@@ -31,6 +35,17 @@ class Usuario:
         self.perfil: str = perfil
         # Chave estrangeira que vincula o usuário a um estabelecimento.
         self.id_estabelecimento: Optional[int] = id_estabelecimento
+
+
+class Mecanico:
+    """Representa um mecânico ou profissional da oficina."""
+
+    def __init__(self, id: int, nome: str, cpf: int, especialidade: Optional[str], ativo: bool = True):
+        self.id: int = id
+        self.nome: str = nome
+        self.cpf: int = cpf
+        self.especialidade: Optional[str] = especialidade
+        self.ativo: bool = ativo
 
 
 class Cliente:
@@ -73,6 +88,7 @@ class Carro:
         self.placa: str = placa
         self.cliente_id: int = cliente_id
         self.ativo: bool = ativo
+
 
 class Peca:
     """Representa uma peça ou item de estoque."""
