@@ -453,41 +453,135 @@ def ativar_carro_por_id(carro_id: int) -> bool:
 # QUERIES DE PEÇAS E ESTOQUE
 # =================================================================================
 
-
+# --- FUNÇÃO ATUALIZADA ---
 def obter_pecas() -> List[Peca]:
-    """Retorna uma lista de todas as peças."""
+    """Retorna uma lista de todas as peças (ativas e inativas)."""
     logger.debug("Executando query para obter todas as peças.")
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
+            # A query agora também busca peças inativas, ordenando por nome.
             cursor.execute("SELECT * FROM pecas ORDER BY nome")
             return [Peca(**row) for row in cursor.fetchall()]
     except sqlite3.Error as e:
         logger.error(f"Erro ao obter peças: {e}", exc_info=True)
         return []
 
-
-def atualizar_estoque_peca(peca_id: int, quantidade_movimentada: int):
+# --- NOVAS FUNÇÕES ---
+def criar_peca(dados: dict) -> Peca | None:
     """
-    Atualiza o estoque de uma peça.
-    :param peca_id: O ID da peça a ser atualizada.
-    :param quantidade_movimentada: Quantidade a ser adicionada (positiva para entrada, negativa para saída).
+    Insere uma nova peça no banco de dados. A peça é criada como 'ativa' por padrão.
+    :param dados: Um dicionário contendo todos os campos da peça.
+    :return: O objeto Peca recém-criado ou None em caso de falha.
     """
-    logger.info(
-        f"Executando query para atualizar estoque da peça {peca_id}. Movimentação: {quantidade_movimentada}")
+    logger.info(f"Executando query para criar a peça: {dados.get('nome')}")
+    sql = """
+        INSERT INTO pecas (
+            nome, referencia, fabricante, descricao, preco_compra,
+            preco_venda, quantidade_em_estoque
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    """
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE pecas SET quantidade_em_estoque = quantidade_em_estoque + ? WHERE id = ?",
-                (quantidade_movimentada, peca_id),
-            )
+            cursor.execute(sql, (
+                dados['nome'], dados['referencia'], dados['fabricante'],
+                dados['descricao'], dados['preco_compra'], dados['preco_venda'],
+                dados['quantidade_em_estoque']
+            ))
+            novo_id = cursor.lastrowid
             conn.commit()
-            logger.info(f"Estoque da peça {peca_id} atualizado com sucesso.")
+            logger.info(f"Peça '{dados.get('nome')}' criada com sucesso com o ID: {novo_id}.")
+            # Retorna uma instância do modelo Peca com os dados inseridos
+            return Peca(id=novo_id, ativo=True, **dados)
     except sqlite3.Error as e:
-        logger.error(
-            f"Erro ao atualizar o estoque da peça {peca_id}: {e}", exc_info=True)
+        # A exceção (ex: UNIQUE constraint) será tratada no ViewModel
+        logger.error(f"Erro ao criar a peça '{dados.get('nome')}': {e}", exc_info=True)
+        raise
 
+def buscar_pecas_por_termo(termo: str) -> List[Peca]:
+    """
+    Busca peças (ativas e inativas) no banco de dados por nome, referência ou fabricante.
+    """
+    logger.debug(f"Executando busca de peças pelo termo: '{termo}'")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            query = """
+                SELECT * FROM pecas
+                WHERE nome LIKE ? OR referencia LIKE ? OR fabricante LIKE ?
+                ORDER BY nome
+            """
+            like_termo = f"%{termo}%"
+            cursor.execute(query, (like_termo, like_termo, like_termo))
+            return [Peca(**row) for row in cursor.fetchall()]
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao buscar peças por termo: {e}", exc_info=True)
+        return []
+
+def obter_peca_por_id(peca_id: int) -> Peca | None:
+    """
+    Busca uma única peça pelo seu ID, independente de estar ativa ou não.
+    """
+    logger.debug(f"Buscando peça pelo ID: {peca_id}")
+    sql = "SELECT * FROM pecas WHERE id = ?"
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            result = cursor.execute(sql, (peca_id,)).fetchone()
+            return Peca(**result) if result else None
+    except Exception as e:
+        logging.error(f"Erro ao obter peça por ID {peca_id}: {e}", exc_info=True)
+        return None
+
+def atualizar_peca(peca_id: int, novos_dados: dict) -> bool:
+    """Atualiza todos os dados de uma peça específica no banco de dados."""
+    logger.info(f"Executando query para atualizar peça ID: {peca_id}")
+    sql = """
+        UPDATE pecas SET
+            nome = ?, referencia = ?, fabricante = ?, descricao = ?,
+            preco_compra = ?, preco_venda = ?, quantidade_em_estoque = ?
+        WHERE id = ?
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, (
+                novos_dados['nome'], novos_dados['referencia'], novos_dados['fabricante'],
+                novos_dados['descricao'], novos_dados['preco_compra'], novos_dados['preco_venda'],
+                novos_dados['quantidade_em_estoque'], peca_id
+            ))
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao atualizar peça ID {peca_id}: {e}", exc_info=True)
+        raise
+
+def desativar_peca_por_id(peca_id: int) -> bool:
+    """Realiza a exclusão lógica de uma peça, setando seu status para 'ativo = 0'."""
+    logger.info(f"Executando query para desativar peça ID: {peca_id}")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE pecas SET ativo = 0 WHERE id = ?", (peca_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao desativar peça ID {peca_id}: {e}", exc_info=True)
+        return False
+
+def ativar_peca_por_id(peca_id: int) -> bool:
+    """Reativa uma peça que foi desativada, setando seu status para 'ativo = 1'."""
+    logger.info(f"Executando query para ATIVAR peça ID: {peca_id}")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE pecas SET ativo = 1 WHERE id = ?", (peca_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao ativar peça ID {peca_id}: {e}", exc_info=True)
+        return False
 
 def quantidade_em_estoque_suficiente(peca_id: int, quantidade_necessaria: int) -> bool:
     """Verifica se a quantidade em estoque é suficiente para a peça."""
