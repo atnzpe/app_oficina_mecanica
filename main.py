@@ -26,6 +26,9 @@ from src.views.cadastro_cliente_view import CadastroClienteViewFactory
 from src.views.onboarding_cliente_view import OnboardingClienteViewFactory
 from src.views.gerir_clientes_view import GerirClientesViewFactory
 from src.views.editar_cliente_view import EditarClienteViewFactory
+from src.views.gerir_carros_view import GerirCarrosViewFactory
+from src.views.cadastro_carro_view import CadastroCarroViewFactory
+from src.views.editar_carro_view import EditarCarroViewFactory
 
 # Importações de Serviços e Banco de Dados
 from src.services.task_queue_service import processar_fila_db
@@ -77,6 +80,7 @@ def main(page: ft.Page):
     def route_change(route):
         logging.info(f"Navegando para a rota: {page.route}")
         edit_cliente_route = re.match(r"/editar_cliente/(\d+)", page.route)
+        edit_carro_route = re.match(r"/editar_carro/(\d+)", page.route)
         page.views.clear()
 
         # Mapeamento de rotas para as View Factories
@@ -97,8 +101,21 @@ def main(page: ft.Page):
         elif edit_cliente_route:
             cliente_id = int(edit_cliente_route.group(1))
             page.views.append(EditarClienteViewFactory(page, cliente_id=cliente_id))
-        elif page.route == "/gerir_veiculos":
-            page.views.append(PlaceholderViewFactory(page, "Gerenciar Veículos"))
+            
+        # --- ROTAS DE CARRO ---
+        #gerir Carros
+        elif page.route == "/gerir_carros":
+            page.views.append(GerirCarrosViewFactory(page))
+        #Cadastro Carro    
+        elif page.route == "/cadastro_carro":
+            page.views.append(CadastroCarroViewFactory(page))
+        #Editar Carro
+        elif edit_carro_route:
+            carro_id = int(edit_carro_route.group(1))
+            page.views.append(EditarCarroViewFactory(page, carro_id=carro_id))
+            
+        # --- Rotas de Peças, Serviços e Mecânicos ---    
+            
         elif page.route == "/gerir_pecas":
             page.views.append(PlaceholderViewFactory(page, "Gerenciar Peças"))
         elif page.route == "/gerir_servicos":

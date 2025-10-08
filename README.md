@@ -1,14 +1,14 @@
-# **OS \- Sistema de Gestão para Oficina Mecânica 🚗🔧**
+# **OS - Sistema de Gestão para Oficina Mecânica 🚗🔧**
 
-\<p align="center"\>  
-\<img src="https://www.google.com/search?q=https://raw.githubusercontent.com/atnzpe/app\_oficina\_mecanica/main/assets/ico.png" alt="Logotipo do Projeto" width="250"/\>  
-\</p\>  
-\<p align="center"\>  
-\<img src="https://www.google.com/search?q=https://img.shields.io/badge/Plataforma-Desktop%2520%257C%2520Android-brightgreen%3Flogo%3Dandroid" alt="Plataforma"\>  
-\<img src="https://www.google.com/search?q=https://img.shields.io/badge/Python-3.10%252B-blue%3Flogo%3Dpython" alt="Python Version"\>  
-\<img src="https://www.google.com/search?q=https://img.shields.io/badge/Flet-Cross--Platform-green%3Flogo%3Dflutter" alt="Flet Framework"\>  
-\<img src="https://www.google.com/search?q=https://img.shields.io/badge/Status-Est%C3%A1vel%2520(MVP)-blue" alt="Project Status"\>  
-\</p\>
+<p align="center">  
+<img src="https://raw.githubusercontent.com/atnzpe/app_oficina_mecanica/main/assets/ico.png" alt="Logotipo do Projeto" width="250"/>  
+</p>  
+<p align="center">  
+<img src="https://img.shields.io/badge/Plataforma-Desktop%20%7C%20Android-brightgreen?logo=android" alt="Plataforma">  
+<img src="https://img.shields.io/badge/Python-3.10%2B-blue?logo=python" alt="Python Version">  
+<img src="https://img.shields.io/badge/Flet-Cross--Platform-green?logo=flutter" alt="Flet Framework">  
+<img src="https://img.shields.io/badge/Status-Est%C3%A1vel%20(MVP)-blue" alt="Project Status">  
+</p>
 
 ## **📄 Descrição**
 
@@ -19,13 +19,12 @@ Ele oferece um controle completo sobre o fluxo de trabalho, desde o cadastro de 
 ## **✨ Funcionalidades Principais**
 
 | Funcionalidade | Status | Detalhes |
-| :---- | :---- | :---- |
+| :--- | :--- | :--- |
 | **Arquitetura MVVM Robusta** | ✅ | O código está 100% refatorado, separando UI, lógica e dados. |
 | **Fluxo de Autenticação Seguro** | ✅ | Cadastro do 1º admin, login com bcrypt, e navegação por rotas. |
 | **Onboarding Inteligente** | ✅ | Guia o novo usuário na configuração inicial da oficina. |
-| **Prompt para Primeiro Cliente** | ✅ | Incentiva o usuário a começar a usar o sistema ativamente. |
-| **Gestão de Clientes** | 🚧 | CRUD (Criar, Ler, Atualizar, Apagar) de clientes. |
-| **Gerenciamento de Carros** | 🚧 | CRUD de veículos, associados aos clientes. |
+| **Gestão de Clientes** | ✅ | CRUD completo, com busca e gerenciamento de status (ativo/inativo). |
+| **Gerenciamento de Carros** | ✅ | CRUD completo de veículos, associados aos seus proprietários. |
 | **Controle de Peças/Estoque** | 🚧 | CRUD de peças e controle de inventário. |
 | **Ordem de Serviço Completa** | 🚧 | Abertura e inclusão de peças/serviços. |
 | **Perfis de Acesso** | ⏳ | Diferenciação entre Admin e Mecanico. |
@@ -35,15 +34,14 @@ Ele oferece um controle completo sobre o fluxo de trabalho, desde o cadastro de 
 
 Este projeto foi construído sobre princípios modernos de desenvolvimento de software para garantir escalabilidade, segurança e uma ótima experiência de usuário.
 
-* **Arquitetura Offline-First (SQLite):** O coração da aplicação é um banco de dados **SQLite local** (database.db). Todas as operações (cadastros, edições, exclusões) são executadas diretamente neste banco de dados, garantindo que o sistema seja **100% funcional sem conexão com a internet**.  
-* **Sincronização na Nuvem (Firebase Firestore):** (Planejado) Para garantir o backup e a utilização em múltiplos dispositivos, um serviço de sincronização irá operar em segundo plano. Quando conectado à internet, ele enviará as alterações do banco local (SQLite) para um banco de dados **Firebase Firestore** na nuvem e buscará por atualizações externas.  
-* **Recuperação de Dados via Login Google (Firebase Auth):** (Planejado) A autenticação de usuários via **Login com Google** é a chave para a portabilidade. Ao logar em um novo dispositivo, o sistema se conectará ao Firebase, identificará o usuário e fará o download de todos os dados do Firestore para a base de dados SQLite local, restaurando completamente o ambiente de trabalho do usuário.  
-* **Padrão MVVM (Model-View-ViewModel):** O código está estritamente estruturado no padrão MVVM, que separa claramente as responsabilidades:  
-  * **Model:** As classes de dados (models.py) e a camada de acesso ao banco (database.py, queries.py).  
-  * **View:** Os componentes visuais da UI (views/).  
-  * **ViewModel:** O "cérebro" da UI, contendo a lógica e o estado (viewmodels/).
+* **Arquitetura Offline-First (SQLite):** O coração da aplicação é um banco de dados **SQLite local** (database.db). Todas as operações (cadastros, edições, exclusões) são executadas diretamente neste banco de dados, garantindo que o sistema seja **100% funcional sem conexão com a internet**.
+* **Padrão MVVM (Model-View-ViewModel):** O código está estritamente estruturado no padrão MVVM, que separa claramente as responsabilidades:
+    * **Model:** As classes de dados (`models/`) e a camada de acesso ao banco (`database/`).
+    * **View:** Os componentes visuais da UI (`views/`).
+    * **ViewModel:** O "cérebro" da UI, contendo a lógica e o estado (`viewmodels/`).
 
-\<details\> \<summary\>\<strong\>Clique para ver a Estrutura de Arquivos\</strong\>\</summary\>
+<details> <summary><strong>Clique para ver a Estrutura de Arquivos</strong></summary>
+
 
 src/  
 ├── models/             \# MODEL: Classes de dados (Cliente, Carro, etc.)  
@@ -95,19 +93,27 @@ Siga os passos abaixo para configurar e rodar a aplicação em seu ambiente de d
 
 Nosso roadmap é gerenciado através das [**Issues do GitHub**](https://github.com/atnzpe/app_oficina_mecanica/issues). As principais frentes de trabalho são:
 
-* ✅ **Issue \#1 & \#2: Refatoração Arquitetural para MVVM (Concluído)**  
-  * \[x\] Estruturação do código em views, viewmodels, services.  
-  * \[x\] Criação da camada de acesso a dados com database.py e queries.py.  
-  * \[x\] Implementação de fluxo de login, onboarding e prompt seguros.  
-* 🚧 **Issue \#8: Implementar CRUD de Clientes (Em Andamento)**  
-  * \[ \] Desenvolver a View e o ViewModel para cadastro e edição de clientes.  
-* ⏳ **Issue \#6: Modernização da Autenticação (Planejado)**  
-  * \[ \] Integrar o Firebase Authentication para login com Google.  
-* ⏳ **Issue \#5: Sincronização na Nuvem (Planejado)**  
-  * \[ \] Configurar projeto no Firebase (Firestore).  
-  * \[ \] Desenvolver o serviço de sincronização entre SQLite e Firestore.  
-* ⏳ **Issue \#7: Pipeline de Build Multiplataforma (Planejado)**  
-  * \[ \] Configurar script de build para Windows (.exe) e Android (.apk).
+* ✅ **Issue #1 & #2: Refatoração Arquitetural para MVVM (Concluído)**
+    * [x] Estruturação do código em views, viewmodels, services.
+    * [x] Criação da camada de acesso a dados com `database.py` e `queries.py`.
+    * [x] Implementação de fluxo de login, onboarding e prompt seguros.
+* ✅ **Issue #8: Implementar CRUD de Clientes (Concluído)**
+    * [x] Desenvolver as Views e ViewModels para cadastro, edição e listagem.
+    * [x] Implementar listagem com busca e status (ativo/inativo).
+    * [x] Permitir a ativação e desativação de clientes.
+* ✅ **Issue #16: Implementar CRUD de Carros (Concluído)**
+    * [x] Desenvolver as Views e ViewModels para o CRUD completo de Carros.
+    * [x] Implementar formulário com dropdown de proprietários.
+    * [x] Permitir a ativação e desativação de carros.
+* 🚧 **Issue #18: Implementar CRUD de Peças e Estoque (Em Andamento)**
+    * [ ] Desenvolver a estrutura inicial (Model, Queries, Views, ViewModels).
+* ⏳ **Issue #6: Modernização da Autenticação (Planejado)**
+    * [ ] Integrar o Firebase Authentication para login com Google.
+* ⏳ **Issue #5: Sincronização na Nuvem (Planejado)**
+    * [ ] Configurar projeto no Firebase (Firestore).
+    * [ ] Desenvolver o serviço de sincronização entre SQLite e Firestore.
+* ⏳ **Issue #7: Pipeline de Build Multiplataforma (Planejado)**
+    * [ ] Configurar script de build para Windows (.exe) e Android (.apk).
 
 ## **🤝 Contribuições**
 
