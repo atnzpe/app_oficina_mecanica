@@ -31,7 +31,7 @@ from src.views.cadastro_carro_view import CadastroCarroViewFactory
 from src.views.editar_carro_view import EditarCarroViewFactory
 from src.views.gerir_pecas_view import GerirPecasViewFactory
 from src.views.cadastro_peca_view import CadastroPecaViewFactory # -> Será criado depois
-# from src.views.editar_peca_view import EditarPecaViewFactory # -> Será criado depois
+from src.views.editar_peca_view import EditarPecaViewFactory # -> Será criado depois
 
 # Importações de Serviços e Banco de Dados
 from src.services.task_queue_service import processar_fila_db
@@ -84,6 +84,7 @@ def main(page: ft.Page):
         logging.info(f"Navegando para a rota: {page.route}")
         edit_cliente_route = re.match(r"/editar_cliente/(\d+)", page.route)
         edit_carro_route = re.match(r"/editar_carro/(\d+)", page.route)
+        edit_peca_route = re.match(r"/editar_peca/(\d+)", page.route)
         page.views.clear()
 
         # Mapeamento de rotas para as View Factories
@@ -124,9 +125,10 @@ def main(page: ft.Page):
             page.views.append(GerirPecasViewFactory(page))
         elif page.route == "/cadastro_peca":
             page.views.append(CadastroPecaViewFactory(page))
-        # elif edit_peca_route:
-            # peca_id = int(edit_peca_route.group(1))
-            # page.views.append(EditarPecaViewFactory(page, peca_id=peca_id))
+         
+        elif edit_peca_route: # -> Rota ativada
+            peca_id = int(edit_peca_route.group(1))
+            page.views.append(EditarPecaViewFactory(page, peca_id=peca_id))
         elif page.route == "/gerir_servicos":
             page.views.append(PlaceholderViewFactory(page, "Gerenciar Serviços"))
         elif page.route == "/gerir_mecanicos":

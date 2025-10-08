@@ -519,6 +519,44 @@ def buscar_pecas_por_termo(termo: str) -> List[Peca]:
         logger.error(f"Erro ao buscar peças por termo: {e}", exc_info=True)
         return []
 
+def obter_peca_por_id(peca_id: int) -> Peca | None:
+    """
+    Busca uma única peça pelo seu ID, independente de estar ativa ou não.
+    """
+    logger.debug(f"Buscando peça pelo ID: {peca_id}")
+    sql = "SELECT * FROM pecas WHERE id = ?"
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            result = cursor.execute(sql, (peca_id,)).fetchone()
+            return Peca(**result) if result else None
+    except Exception as e:
+        logging.error(f"Erro ao obter peça por ID {peca_id}: {e}", exc_info=True)
+        return None
+
+def atualizar_peca(peca_id: int, novos_dados: dict) -> bool:
+    """Atualiza todos os dados de uma peça específica no banco de dados."""
+    logger.info(f"Executando query para atualizar peça ID: {peca_id}")
+    sql = """
+        UPDATE pecas SET
+            nome = ?, referencia = ?, fabricante = ?, descricao = ?,
+            preco_compra = ?, preco_venda = ?, quantidade_em_estoque = ?
+        WHERE id = ?
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, (
+                novos_dados['nome'], novos_dados['referencia'], novos_dados['fabricante'],
+                novos_dados['descricao'], novos_dados['preco_compra'], novos_dados['preco_venda'],
+                novos_dados['quantidade_em_estoque'], peca_id
+            ))
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao atualizar peça ID {peca_id}: {e}", exc_info=True)
+        raise
+
 def desativar_peca_por_id(peca_id: int) -> bool:
     """Realiza a exclusão lógica de uma peça, setando seu status para 'ativo = 0'."""
     logger.info(f"Executando query para desativar peça ID: {peca_id}")
