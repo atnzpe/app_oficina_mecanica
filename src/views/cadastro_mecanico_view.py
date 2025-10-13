@@ -36,10 +36,11 @@ class CadastroMecanicoView(ft.Column):
             label="Nome do Mecânico*", width=AppDimensions.FIELD_WIDTH, border_radius=AppDimensions.BORDER_RADIUS)
         self._cpf_field = ft.TextField(label="CPF*", width=AppDimensions.FIELD_WIDTH,
                                        border_radius=AppDimensions.BORDER_RADIUS, keyboard_type=ft.KeyboardType.NUMBER)
-        self._especialidade_field = ft.TextField(
-            label="Especialidade", width=AppDimensions.FIELD_WIDTH, border_radius=AppDimensions.BORDER_RADIUS)
-
-        self._dialogo_feedback = ft.AlertDialog(
+        self._endereco_field = ft.TextField(
+            label="Endereço", width=AppDimensions.FIELD_WIDTH, border_radius=AppDimensions.BORDER_RADIUS)  # NOVO
+        self._telefone_field = ft.TextField(label="Telefone", width=AppDimensions.FIELD_WIDTH,
+                                            border_radius=AppDimensions.BORDER_RADIUS, keyboard_type=ft.KeyboardType.PHONE)  # NOVO
+        self._especialidade_field = ft.TextField(label="Especialidade", width=AppDimensions.FIELD_WIDTH, border_radius=AppDimensions.BORDER_RADIUS)        self._dialogo_feedback = ft.AlertDialog(
             modal=True, title=ft.Text(), content=ft.Text(), actions=[])
 
         self.controls = [
@@ -47,6 +48,8 @@ class CadastroMecanicoView(ft.Column):
                     size=AppFonts.TITLE_MEDIUM, weight=ft.FontWeight.BOLD),
             self._nome_field,
             self._cpf_field,
+            self._endereco_field,  # NOVO
+            self._telefone_field,  # NOVO
             self._especialidade_field,
             ft.Row(
                 [
@@ -65,6 +68,8 @@ class CadastroMecanicoView(ft.Column):
         return {
             "nome": self._nome_field.value,
             "cpf": self._cpf_field.value,
+            "endereco": self._endereco_field.value,  # NOVO
+            "telefone": self._telefone_field.value,  # NOVO
             "especialidade": self._especialidade_field.value,
         }
 

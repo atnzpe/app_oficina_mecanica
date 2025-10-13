@@ -144,6 +144,8 @@ CREATE_TABLES_SQL = [
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nome TEXT NOT NULL,
         cpf TEXT UNIQUE,
+        endereco TEXT,  
+        telefone TEXT,
         especialidade TEXT,
         ativo BOOLEAN DEFAULT 1
     );

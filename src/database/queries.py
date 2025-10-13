@@ -160,24 +160,27 @@ def complete_onboarding(user_id: int, user_name: str, establishment_name: str):
 # QUERIES DE MECÂNICOS (NOVO)
 # =================================================================================
 
-def criar_mecanico(nome: str, cpf: str, especialidade: str) -> Mecanico | None:
+
+def criar_mecanico(nome: str, cpf: str, endereco: str, telefone: str, especialidade: str) -> Mecanico | None:
     """Insere um novo mecânico no banco de dados."""
     logger.info(f"Executando query para criar mecânico: {nome}")
-    sql = "INSERT INTO mecanicos (nome, cpf, especialidade) VALUES (?, ?, ?)"
+    sql = "INSERT INTO mecanicos (nome, cpf, endereco, telefone, especialidade) VALUES (?, ?, ?, ?, ?)"
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(sql, (nome, cpf, especialidade))
+            cursor.execute(sql, (nome, cpf, endereco, telefone, especialidade))
             novo_id = cursor.lastrowid
             conn.commit()
-            logger.info(f"Mecânico '{nome}' criado com sucesso com o ID: {novo_id}.")
-            return Mecanico(id=novo_id, nome=nome, cpf=cpf, especialidade=especialidade, ativo=True)
+            logger.info(
+                f"Mecânico '{nome}' criado com sucesso com o ID: {novo_id}.")
+            return Mecanico(id=novo_id, nome=nome, cpf=cpf, endereco=endereco, telefone=telefone, especialidade=especialidade, ativo=True)
     except sqlite3.Error:
         logger.error(f"Erro ao criar mecânico '{nome}'.", exc_info=True)
-        raise # Levanta a exceção para ser tratada no ViewModel (ex: CPF duplicado)
+        raise
+
 
 def buscar_mecanicos_por_termo(termo: str) -> List[Mecanico]:
-    """Busca mecânicos (ativos e inativos) por nome, CPF ou especialidade."""
+    # (Esta função não precisa de alteração, pois busca em todas as colunas de texto relevantes)
     logger.debug(f"Executando busca de mecânicos pelo termo: '{termo}'")
     try:
         with get_db_connection() as conn:
@@ -194,33 +197,39 @@ def buscar_mecanicos_por_termo(termo: str) -> List[Mecanico]:
         logger.error(f"Erro ao buscar mecânicos por termo: {e}", exc_info=True)
         return []
 
+
 def obter_mecanico_por_id(mecanico_id: int) -> Mecanico | None:
-    """Busca um único mecânico pelo seu ID."""
+    # (Esta função não precisa de alteração)
     logger.debug(f"Buscando mecânico pelo ID: {mecanico_id}")
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            result = cursor.execute("SELECT * FROM mecanicos WHERE id = ?", (mecanico_id,)).fetchone()
+            result = cursor.execute(
+                "SELECT * FROM mecanicos WHERE id = ?", (mecanico_id,)).fetchone()
             return Mecanico(**result) if result else None
     except Exception as e:
-        logging.error(f"Erro ao obter mecânico por ID {mecanico_id}: {e}", exc_info=True)
+        logging.error(
+            f"Erro ao obter mecânico por ID {mecanico_id}: {e}", exc_info=True)
         return None
 
-def atualizar_mecanico(mecanico_id: int, nome: str, cpf: str, especialidade: str) -> bool:
+
+def atualizar_mecanico(mecanico_id: int, nome: str, cpf: str, endereco: str, telefone: str, especialidade: str) -> bool:
     """Atualiza os dados de um mecânico específico."""
     logger.info(f"Executando query para atualizar mecânico ID: {mecanico_id}")
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "UPDATE mecanicos SET nome = ?, cpf = ?, especialidade = ? WHERE id = ?",
-                (nome, cpf, especialidade, mecanico_id)
+                "UPDATE mecanicos SET nome = ?, cpf = ?, endereco = ?, telefone = ?, especialidade = ? WHERE id = ?",
+                (nome, cpf, endereco, telefone, especialidade, mecanico_id)
             )
             conn.commit()
             return cursor.rowcount > 0
     except sqlite3.Error:
-        logger.error(f"Erro ao atualizar mecânico ID {mecanico_id}:", exc_info=True)
+        logger.error(
+            f"Erro ao atualizar mecânico ID {mecanico_id}:", exc_info=True)
         raise
+
 
 def desativar_mecanico_por_id(mecanico_id: int) -> bool:
     """Realiza a exclusão lógica de um mecânico."""
@@ -228,12 +237,15 @@ def desativar_mecanico_por_id(mecanico_id: int) -> bool:
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("UPDATE mecanicos SET ativo = 0 WHERE id = ?", (mecanico_id,))
+            cursor.execute(
+                "UPDATE mecanicos SET ativo = 0 WHERE id = ?", (mecanico_id,))
             conn.commit()
             return cursor.rowcount > 0
     except sqlite3.Error as e:
-        logger.error(f"Erro ao desativar mecânico ID {mecanico_id}: {e}", exc_info=True)
+        logger.error(
+            f"Erro ao desativar mecânico ID {mecanico_id}: {e}", exc_info=True)
         return False
+
 
 def ativar_mecanico_por_id(mecanico_id: int) -> bool:
     """Reativa um mecânico."""
@@ -241,11 +253,13 @@ def ativar_mecanico_por_id(mecanico_id: int) -> bool:
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("UPDATE mecanicos SET ativo = 1 WHERE id = ?", (mecanico_id,))
+            cursor.execute(
+                "UPDATE mecanicos SET ativo = 1 WHERE id = ?", (mecanico_id,))
             conn.commit()
             return cursor.rowcount > 0
     except sqlite3.Error as e:
-        logger.error(f"Erro ao ativar mecânico ID {mecanico_id}: {e}", exc_info=True)
+        logger.error(
+            f"Erro ao ativar mecânico ID {mecanico_id}: {e}", exc_info=True)
         return False
 
 # =================================================================================
@@ -546,6 +560,8 @@ def ativar_carro_por_id(carro_id: int) -> bool:
 # =================================================================================
 
 # --- FUNÇÃO ATUALIZADA ---
+
+
 def obter_pecas() -> List[Peca]:
     """Retorna uma lista de todas as peças (ativas e inativas)."""
     logger.debug("Executando query para obter todas as peças.")
@@ -560,6 +576,8 @@ def obter_pecas() -> List[Peca]:
         return []
 
 # --- NOVAS FUNÇÕES ---
+
+
 def criar_peca(dados: dict) -> Peca | None:
     """
     Insere uma nova peça no banco de dados. A peça é criada como 'ativa' por padrão.
@@ -583,13 +601,16 @@ def criar_peca(dados: dict) -> Peca | None:
             ))
             novo_id = cursor.lastrowid
             conn.commit()
-            logger.info(f"Peça '{dados.get('nome')}' criada com sucesso com o ID: {novo_id}.")
+            logger.info(
+                f"Peça '{dados.get('nome')}' criada com sucesso com o ID: {novo_id}.")
             # Retorna uma instância do modelo Peca com os dados inseridos
             return Peca(id=novo_id, ativo=True, **dados)
     except sqlite3.Error as e:
         # A exceção (ex: UNIQUE constraint) será tratada no ViewModel
-        logger.error(f"Erro ao criar a peça '{dados.get('nome')}': {e}", exc_info=True)
+        logger.error(
+            f"Erro ao criar a peça '{dados.get('nome')}': {e}", exc_info=True)
         raise
+
 
 def buscar_pecas_por_termo(termo: str) -> List[Peca]:
     """
@@ -611,6 +632,7 @@ def buscar_pecas_por_termo(termo: str) -> List[Peca]:
         logger.error(f"Erro ao buscar peças por termo: {e}", exc_info=True)
         return []
 
+
 def obter_peca_por_id(peca_id: int) -> Peca | None:
     """
     Busca uma única peça pelo seu ID, independente de estar ativa ou não.
@@ -623,8 +645,10 @@ def obter_peca_por_id(peca_id: int) -> Peca | None:
             result = cursor.execute(sql, (peca_id,)).fetchone()
             return Peca(**result) if result else None
     except Exception as e:
-        logging.error(f"Erro ao obter peça por ID {peca_id}: {e}", exc_info=True)
+        logging.error(
+            f"Erro ao obter peça por ID {peca_id}: {e}", exc_info=True)
         return None
+
 
 def atualizar_peca(peca_id: int, novos_dados: dict) -> bool:
     """Atualiza todos os dados de uma peça específica no banco de dados."""
@@ -646,8 +670,10 @@ def atualizar_peca(peca_id: int, novos_dados: dict) -> bool:
             conn.commit()
             return cursor.rowcount > 0
     except sqlite3.Error as e:
-        logger.error(f"Erro ao atualizar peça ID {peca_id}: {e}", exc_info=True)
+        logger.error(
+            f"Erro ao atualizar peça ID {peca_id}: {e}", exc_info=True)
         raise
+
 
 def desativar_peca_por_id(peca_id: int) -> bool:
     """Realiza a exclusão lógica de uma peça, setando seu status para 'ativo = 0'."""
@@ -655,12 +681,15 @@ def desativar_peca_por_id(peca_id: int) -> bool:
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("UPDATE pecas SET ativo = 0 WHERE id = ?", (peca_id,))
+            cursor.execute(
+                "UPDATE pecas SET ativo = 0 WHERE id = ?", (peca_id,))
             conn.commit()
             return cursor.rowcount > 0
     except sqlite3.Error as e:
-        logger.error(f"Erro ao desativar peça ID {peca_id}: {e}", exc_info=True)
+        logger.error(
+            f"Erro ao desativar peça ID {peca_id}: {e}", exc_info=True)
         return False
+
 
 def ativar_peca_por_id(peca_id: int) -> bool:
     """Reativa uma peça que foi desativada, setando seu status para 'ativo = 1'."""
@@ -668,12 +697,14 @@ def ativar_peca_por_id(peca_id: int) -> bool:
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("UPDATE pecas SET ativo = 1 WHERE id = ?", (peca_id,))
+            cursor.execute(
+                "UPDATE pecas SET ativo = 1 WHERE id = ?", (peca_id,))
             conn.commit()
             return cursor.rowcount > 0
     except sqlite3.Error as e:
         logger.error(f"Erro ao ativar peça ID {peca_id}: {e}", exc_info=True)
         return False
+
 
 def quantidade_em_estoque_suficiente(peca_id: int, quantidade_necessaria: int) -> bool:
     """Verifica se a quantidade em estoque é suficiente para a peça."""
