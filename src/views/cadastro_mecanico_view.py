@@ -38,10 +38,25 @@ class CadastroMecanicoView(ft.Column):
                                        border_radius=AppDimensions.BORDER_RADIUS, keyboard_type=ft.KeyboardType.NUMBER)
         self._endereco_field = ft.TextField(
             label="Endereço", width=AppDimensions.FIELD_WIDTH, border_radius=AppDimensions.BORDER_RADIUS)  # NOVO
-        self._telefone_field = ft.TextField(label="Telefone", width=AppDimensions.FIELD_WIDTH,
-                                            border_radius=AppDimensions.BORDER_RADIUS, keyboard_type=ft.KeyboardType.PHONE)  # NOVO
-        self._especialidade_field = ft.TextField(label="Especialidade", width=AppDimensions.FIELD_WIDTH, border_radius=AppDimensions.BORDER_RADIUS)        self._dialogo_feedback = ft.AlertDialog(
-            modal=True, title=ft.Text(), content=ft.Text(), actions=[])
+
+        self._telefone_field = ft.TextField(
+            label="Telefone",
+            width=AppDimensions.FIELD_WIDTH,
+            border_radius=AppDimensions.BORDER_RADIUS,
+            keyboard_type=ft.KeyboardType.PHONE
+        )  # NOVO
+
+        self._especialidade_field = ft.TextField(
+            label="Especialidade",
+            width=AppDimensions.FIELD_WIDTH,
+            border_radius=AppDimensions.BORDER_RADIUS
+        )
+
+        self._dialogo_feedback = ft.AlertDialog(
+            modal=True,
+            title=ft.Text(),
+            content=ft.Text(), actions=[]
+        )
 
         self.controls = [
             ft.Text("Cadastro de Novo Mecânico",
