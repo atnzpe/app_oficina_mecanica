@@ -46,6 +46,8 @@ class CadastroMecanicoViewModel:
             novo_mecanico = queries.criar_mecanico(
                 nome=nome,
                 cpf=cpf,
+                endereco=dados.get("endereco", "").strip(),
+                telefone=dados.get("telefone", "").strip(),
                 especialidade=dados.get("especialidade", "").strip()
             )
 

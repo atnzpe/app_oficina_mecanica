@@ -39,11 +39,14 @@ class Usuario:
 
 class Mecanico:
     """Representa um mecânico ou profissional da oficina."""
+    # O construtor agora inclui os campos 'endereco' e 'telefone'
 
-    def __init__(self, id: int, nome: str, cpf: int, especialidade: Optional[str], ativo: bool = True):
+    def __init__(self, id: int, nome: str, cpf: str, endereco: Optional[str], telefone: Optional[str], especialidade: Optional[str], ativo: bool = True):
         self.id: int = id
         self.nome: str = nome
-        self.cpf: int = cpf
+        self.cpf: str = cpf
+        self.endereco: Optional[str] = endereco
+        self.telefone: Optional[str] = telefone
         self.especialidade: Optional[str] = especialidade
         self.ativo: bool = ativo
 
