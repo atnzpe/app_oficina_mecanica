@@ -43,70 +43,6 @@ Este projeto foi construído sobre princípios modernos de desenvolvimento de so
 
 <details> <summary><strong>Clique para ver a Estrutura de Arquivos</strong></summary>
 
-
-Excelente! Missão cumprida. Os logs confirmam que todos os CRUDs da FASE 1 estão funcionais, desde o login até o cadastro em cada um dos módulos. É um marco gigantesco para o projeto!
-
-Como solicitado, vamos formalizar essa conquista atualizando o README.md e, em seguida, podemos discutir os requisitos para o próximo grande desafio: o CRUD de Serviços.
-
-PROPOSTA DE ATUALIZAÇÃO
-1. Crie um branch
-docs/concluir-fase-1-roadmap
-2. ANÁLISE DA SOLICITAÇÃO
-A tarefa é atualizar o arquivo README.md para marcar oficialmente a "FASE 1" do roadmap como concluída, refletindo que os CRUDs de Clientes, Carros, Peças e Mecânicos estão totalmente implementados e funcionais. Também ajustaremos a "FASE 2" para refletir seu novo status de "Em Andamento".
-
-3. ARQUIVOS MODIFICADOS/CRIADOS
-(Documentação: README.md)
-
-Markdown
-
-# **OS - Sistema de Gestão para Oficina Mecânica 🚗🔧**
-
-<p align="center">  
-<img src="https://raw.githubusercontent.com/atnzpe/app_oficina_mecanica/main/assets/ico.png" alt="Logotipo do Projeto" width="250"/>  
-</p>  
-<p align="center">  
-<img src="https://img.shields.io/badge/Plataforma-Desktop%20%7C%20Android-brightgreen?logo=android" alt="Plataforma">  
-<img src="https://img.shields.io/badge/Python-3.10%2B-blue?logo=python" alt="Python Version">  
-<img src="https://img.shields.io/badge/Flet-Cross--Platform-green?logo=flutter" alt="Flet Framework">  
-<img src="https://img.shields.io/badge/Status-Est%C3%A1vel%20(MVP)-blue" alt="Project Status">  
-</p>
-
-## **📄 Descrição**
-
-O **Projeto OS** é uma solução multiplataforma (**Desktop Windows** e **Android**) para gestão de oficinas mecânicas, desenvolvida em Python com o framework Flet. O sistema foi projetado com uma arquitetura **Offline-First**, garantindo total funcionalidade mesmo sem conexão com a internet, tornando-o robusto e confiável para o dia a dia da oficina.
-
-Ele oferece um controle completo sobre o fluxo de trabalho, desde o cadastro de clientes e veículos até a criação de Ordens de Serviço (OS), controle de estoque e geração de relatórios.
-
-## **✨ Funcionalidades Principais**
-
-| Funcionalidade | Status | Detalhes |
-| :--- | :--- | :--- |
-| **Arquitetura MVVM Robusta** | ✅ | O código está 100% refatorado, separando UI, lógica e dados. |
-| **Fluxo de Autenticação Seguro** | ✅ | Cadastro do 1º admin, login com bcrypt, e navegação por rotas. |
-| **Onboarding Inteligente** | ✅ | Guia o novo usuário na configuração inicial da oficina. |
-| **Gestão de Clientes** | ✅ | CRUD completo, com busca e gerenciamento de status (ativo/inativo). |
-| **Gerenciamento de Carros** | ✅ | CRUD completo de veículos, associados aos seus proprietários. |
-| **Controle de Peças/Estoque** | ✅ | CRUD completo de peças, base para o controle de inventário. |
-| **Gestão de Mecânicos** | ✅ | CRUD completo para gerenciar os profissionais da oficina. |
-| **Gestão Administrativa** | 🚧 | CRUDs de Serviços, Usuários, Minha Conta e Estabelecimento. |
-| **Operações de Estoque** | 🚧 | Entrada e Saída avulsa de peças. |
-| **Ordem de Serviço Completa** | 🚧 | Abertura e inclusão de peças/serviços. |
-
-## **🏛️ Arquitetura e Conceitos Chave**
-
-Este projeto foi construído sobre princípios modernos de desenvolvimento de software para garantir escalabilidade, segurança e uma ótima experiência de usuário.
-
-* **Arquitetura Offline-First (SQLite):** O coração da aplicação é um banco de dados **SQLite local** (database.db). Todas as operações são executadas diretamente neste banco de dados, garantindo que o sistema seja **100% funcional sem conexão com a internet**.
-* **Padrão MVVM (Model-View-ViewModel):** O código está estritamente estruturado no padrão MVVM, que separa claramente as responsabilidades:
-    * **Model:** As classes de dados (`models/`) e a camada de acesso ao banco (`database/`).
-    * **View:** Os componentes visuais da UI (`views/`).
-    * **ViewModel:** O "cérebro" da UI, contendo a lógica e o estado (`viewmodels/`).
-
-<details> 
-    <summary>
-    <strong>Clique para ver a Estrutura de Arquivos</strong>
-    </summary>
-
 src/
 ├── models/             # MODEL: Classes de dados
 ├── database/           # MODEL: Lógica de conexão e acesso a dados
@@ -174,7 +110,7 @@ Contribuições são muito bem-vindas! Se você encontrar um bug ou tiver uma su
 
 ## **👨‍💻 Desenvolvedores**
 
-| <img src="https://avatars.githubusercontent.com/u/89949983?v=4" width=115> <sub>Gleyson Atanázio</sub> | <img src="https://avatars.githubusercontent.com/u/101737645?v=4" width=115> <sub>Vanderson</sub> |
-| :--- | :--- |
+| <img src="https://avatars.githubusercontent.com/u/15948634?v=4" width=115> <sub>Gleyson Atanázio</sub> | <img src="https://avatars.githubusercontent.com/u/108997883?v=4" width=115> <sub>Vanderson</sub> | <img src="https://avatars.githubusercontent.com/u/89957139?v=4" width=115> <sub>Rudimacy Duprat</sub> |
+| :--- | :--- | :--- |
 
-<p align="center"> ⌨️ com 💜 por Gleyson Atanázio e Vanderson </p>
+<p align="center"> ⌨️ com 💜 por Gleyson Atanázio, Vanderson e Rudimacy Duprat </p>
