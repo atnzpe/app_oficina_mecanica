@@ -730,25 +730,45 @@ def quantidade_em_estoque_suficiente(peca_id: int, quantidade_necessaria: int) -
         return False
 
 # =================================================================================
-# QUERIES DE SERVIÇOS (NOVO)
+# QUERIES DE SERVIÇOS 
 # =================================================================================
 
-
-def criar_servico(nome: str, descricao: str, valor: float) -> Servico | None:
-    """Insere um novo serviço no banco de dados."""
-    logger.info(f"Executando query para criar serviço: {nome}")
-    sql = "INSERT INTO servicos (nome, descricao, valor) VALUES (?, ?, ?)"
+def criar_servico(nome: str, descricao: str, valor: float, pecas_ids: list) -> Servico | None:
+    """
+    Insere um novo serviço e suas peças associadas em uma única transação.
+    """
+    logger.info(f"Iniciando transação para criar o serviço: {nome}")
+    conn = get_db_connection()
+    if not conn:
+        return None
+    
     try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(sql, (nome, descricao, valor))
-            novo_id = cursor.lastrowid
-            conn.commit()
-            return Servico(id=novo_id, nome=nome, descricao=descricao, valor=valor, ativo=True)
-    except sqlite3.Error:
-        logger.error(f"Erro ao criar serviço '{nome}'.", exc_info=True)
-        raise
+        cursor = conn.cursor()
+        
+        # 1. Insere o serviço principal
+        sql_servico = "INSERT INTO servicos (nome, descricao, valor) VALUES (?, ?, ?)"
+        cursor.execute(sql_servico, (nome, descricao, valor))
+        novo_id = cursor.lastrowid
+        logger.debug(f"Serviço '{nome}' inserido com ID: {novo_id}.")
 
+        # 2. Se houver peças selecionadas, insere na tabela de junção
+        if pecas_ids:
+            sql_pecas = "INSERT INTO servicos_pecas (servico_id, peca_id) VALUES (?, ?)"
+            dados_juncao = [(novo_id, peca_id) for peca_id in pecas_ids]
+            cursor.executemany(sql_pecas, dados_juncao)
+            logger.debug(f"Associadas {len(dados_juncao)} peças ao serviço ID: {novo_id}.")
+
+        conn.commit()
+        logger.info(f"Serviço '{nome}' e suas associações de peças criados com sucesso.")
+        return Servico(id=novo_id, nome=nome, descricao=descricao, valor=valor, ativo=True)
+
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao criar serviço '{nome}'. Transação revertida.", exc_info=True)
+        conn.rollback()
+        raise
+    finally:
+        if conn:
+            conn.close()
 
 def buscar_servicos_por_termo(termo: str) -> List[Servico]:
     """Busca serviços (ativos e inativos) por nome ou descrição."""
@@ -764,39 +784,70 @@ def buscar_servicos_por_termo(termo: str) -> List[Servico]:
         logger.error(f"Erro ao buscar serviços por termo: {e}", exc_info=True)
         return []
 
-
 def obter_servico_por_id(servico_id: int) -> Servico | None:
-    """Busca um único serviço pelo seu ID."""
-    logger.debug(f"Buscando serviço pelo ID: {servico_id}")
+    """Busca um único serviço pelo seu ID, incluindo as peças associadas."""
+    logger.debug(f"Buscando serviço completo pelo ID: {servico_id}")
+    servico = None
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            result = cursor.execute(
-                "SELECT * FROM servicos WHERE id = ?", (servico_id,)).fetchone()
-            return Servico(**result) if result else None
+            # Busca o serviço principal
+            result_servico = cursor.execute("SELECT * FROM servicos WHERE id = ?", (servico_id,)).fetchone()
+            if not result_servico:
+                return None
+            
+            servico = Servico(**result_servico)
+
+            # Busca as peças associadas
+            sql_pecas = """
+                SELECT p.* FROM pecas p
+                JOIN servicos_pecas sp ON p.id = sp.peca_id
+                WHERE sp.servico_id = ?
+            """
+            result_pecas = cursor.execute(sql_pecas, (servico_id,)).fetchall()
+            servico.pecas = [Peca(**row) for row in result_pecas]
+            
+            return servico
     except Exception as e:
-        logging.error(
-            f"Erro ao obter serviço por ID {servico_id}: {e}", exc_info=True)
+        logging.error(f"Erro ao obter serviço completo por ID {servico_id}: {e}", exc_info=True)
         return None
 
-
-def atualizar_servico(servico_id: int, nome: str, descricao: str, valor: float) -> bool:
-    """Atualiza os dados de um serviço específico."""
-    logger.info(f"Executando query para atualizar serviço ID: {servico_id}")
+def atualizar_servico(servico_id: int, nome: str, descricao: str, valor: float, pecas_ids: list) -> bool:
+    """Atualiza os dados de um serviço e suas peças associadas em uma transação."""
+    logger.info(f"Iniciando transação para atualizar o serviço ID: {servico_id}")
+    conn = get_db_connection()
+    if not conn: return False
+    
     try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE servicos SET nome = ?, descricao = ?, valor = ? WHERE id = ?",
-                (nome, descricao, valor, servico_id)
-            )
-            conn.commit()
-            return cursor.rowcount > 0
-    except sqlite3.Error:
-        logger.error(
-            f"Erro ao atualizar serviço ID {servico_id}:", exc_info=True)
-        raise
+        cursor = conn.cursor()
+        # 1. Atualiza a tabela principal de serviços
+        cursor.execute(
+            "UPDATE servicos SET nome = ?, descricao = ?, valor = ? WHERE id = ?",
+            (nome, descricao, valor, servico_id)
+        )
+        logger.debug(f"Tabela 'servicos' para o ID {servico_id} atualizada.")
+        
+        # 2. Remove todas as associações de peças existentes para este serviço
+        cursor.execute("DELETE FROM servicos_pecas WHERE servico_id = ?", (servico_id,))
+        logger.debug(f"Associações de peças antigas para o serviço ID {servico_id} removidas.")
 
+        # 3. Se houver novas peças selecionadas, insere as novas associações
+        if pecas_ids:
+            sql_pecas = "INSERT INTO servicos_pecas (servico_id, peca_id) VALUES (?, ?)"
+            dados_juncao = [(servico_id, peca_id) for peca_id in pecas_ids]
+            cursor.executemany(sql_pecas, dados_juncao)
+            logger.debug(f"{len(dados_juncao)} novas associações de peças inseridas para o serviço ID: {servico_id}.")
+
+        conn.commit()
+        logger.info(f"Serviço ID {servico_id} e suas associações atualizados com sucesso.")
+        return True
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao atualizar serviço ID {servico_id}. Transação revertida.", exc_info=True)
+        conn.rollback()
+        raise
+    finally:
+        if conn:
+            conn.close()
 
 def desativar_servico_por_id(servico_id: int) -> bool:
     """Realiza a exclusão lógica de um serviço."""
@@ -804,15 +855,12 @@ def desativar_servico_por_id(servico_id: int) -> bool:
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE servicos SET ativo = 0 WHERE id = ?", (servico_id,))
+            cursor.execute("UPDATE servicos SET ativo = 0 WHERE id = ?", (servico_id,))
             conn.commit()
             return cursor.rowcount > 0
     except sqlite3.Error as e:
-        logger.error(
-            f"Erro ao desativar serviço ID {servico_id}: {e}", exc_info=True)
+        logger.error(f"Erro ao desativar serviço ID {servico_id}: {e}", exc_info=True)
         return False
-
 
 def ativar_servico_por_id(servico_id: int) -> bool:
     """Reativa um serviço."""
@@ -820,15 +868,12 @@ def ativar_servico_por_id(servico_id: int) -> bool:
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE servicos SET ativo = 1 WHERE id = ?", (servico_id,))
+            cursor.execute("UPDATE servicos SET ativo = 1 WHERE id = ?", (servico_id,))
             conn.commit()
             return cursor.rowcount > 0
     except sqlite3.Error as e:
-        logger.error(
-            f"Erro ao ativar serviço ID {servico_id}: {e}", exc_info=True)
+        logger.error(f"Erro ao ativar serviço ID {servico_id}: {e}", exc_info=True)
         return False
-
 
 # =================================================================================
 # QUERIES DE ORDEM DE SERVIÇO E MOVIMENTAÇÕES

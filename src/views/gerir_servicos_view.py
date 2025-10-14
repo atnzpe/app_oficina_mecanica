@@ -1,12 +1,14 @@
 # =================================================================================
 # MÓDULO DA VIEW DE GERENCIAMENTO DE SERVIÇOS (gerir_servicos_view.py)
 # =================================================================================
+from typing import List
+import logging
 import flet as ft
 from src.viewmodels.gerir_servicos_viewmodel import GerirServicosViewModel
 from src.models.models import Servico
-from typing import List
+
 from src.styles.style import AppDimensions, AppFonts
-import logging
+
 
 logger = logging.getLogger(__name__)
 
