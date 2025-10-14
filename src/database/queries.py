@@ -27,7 +27,7 @@ from src.database.database import get_db_connection
 # Importa as classes de modelo para que as funções possam retornar objetos
 # fortemente tipados (ex: uma lista de Clientes), o que melhora a clareza
 # e a segurança do código nos ViewModels.
-from src.models.models import Usuario, Cliente, Carro, Peca, Estabelecimento, Mecanico
+from src.models.models import Usuario, Cliente, Carro, Peca, Estabelecimento, Mecanico, Servico
 
 # --- CONFIGURAÇÃO DO LOGGER ---
 logger = logging.getLogger("DB_QUERIES")
@@ -728,6 +728,107 @@ def quantidade_em_estoque_suficiente(peca_id: int, quantidade_necessaria: int) -
         logger.error(
             f"Erro ao verificar a quantidade em estoque da peça {peca_id}: {e}", exc_info=True)
         return False
+
+# =================================================================================
+# QUERIES DE SERVIÇOS (NOVO)
+# =================================================================================
+
+
+def criar_servico(nome: str, descricao: str, valor: float) -> Servico | None:
+    """Insere um novo serviço no banco de dados."""
+    logger.info(f"Executando query para criar serviço: {nome}")
+    sql = "INSERT INTO servicos (nome, descricao, valor) VALUES (?, ?, ?)"
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, (nome, descricao, valor))
+            novo_id = cursor.lastrowid
+            conn.commit()
+            return Servico(id=novo_id, nome=nome, descricao=descricao, valor=valor, ativo=True)
+    except sqlite3.Error:
+        logger.error(f"Erro ao criar serviço '{nome}'.", exc_info=True)
+        raise
+
+
+def buscar_servicos_por_termo(termo: str) -> List[Servico]:
+    """Busca serviços (ativos e inativos) por nome ou descrição."""
+    logger.debug(f"Executando busca de serviços pelo termo: '{termo}'")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            query = "SELECT * FROM servicos WHERE nome LIKE ? OR descricao LIKE ? ORDER BY nome"
+            like_termo = f"%{termo}%"
+            cursor.execute(query, (like_termo, like_termo))
+            return [Servico(**row) for row in cursor.fetchall()]
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao buscar serviços por termo: {e}", exc_info=True)
+        return []
+
+
+def obter_servico_por_id(servico_id: int) -> Servico | None:
+    """Busca um único serviço pelo seu ID."""
+    logger.debug(f"Buscando serviço pelo ID: {servico_id}")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            result = cursor.execute(
+                "SELECT * FROM servicos WHERE id = ?", (servico_id,)).fetchone()
+            return Servico(**result) if result else None
+    except Exception as e:
+        logging.error(
+            f"Erro ao obter serviço por ID {servico_id}: {e}", exc_info=True)
+        return None
+
+
+def atualizar_servico(servico_id: int, nome: str, descricao: str, valor: float) -> bool:
+    """Atualiza os dados de um serviço específico."""
+    logger.info(f"Executando query para atualizar serviço ID: {servico_id}")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE servicos SET nome = ?, descricao = ?, valor = ? WHERE id = ?",
+                (nome, descricao, valor, servico_id)
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error:
+        logger.error(
+            f"Erro ao atualizar serviço ID {servico_id}:", exc_info=True)
+        raise
+
+
+def desativar_servico_por_id(servico_id: int) -> bool:
+    """Realiza a exclusão lógica de um serviço."""
+    logger.info(f"Executando query para desativar serviço ID: {servico_id}")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE servicos SET ativo = 0 WHERE id = ?", (servico_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(
+            f"Erro ao desativar serviço ID {servico_id}: {e}", exc_info=True)
+        return False
+
+
+def ativar_servico_por_id(servico_id: int) -> bool:
+    """Reativa um serviço."""
+    logger.info(f"Executando query para ATIVAR serviço ID: {servico_id}")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE servicos SET ativo = 1 WHERE id = ?", (servico_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(
+            f"Erro ao ativar serviço ID {servico_id}: {e}", exc_info=True)
+        return False
+
 
 # =================================================================================
 # QUERIES DE ORDEM DE SERVIÇO E MOVIMENTAÇÕES
