@@ -137,6 +137,20 @@ CREATE_TABLES_SQL = [
         FOREIGN KEY (id_estabelecimento) REFERENCES estabelecimentos(id)
     );
     """,
+    
+    #Tabela de Mecânicos: permanece a mesma, para os funcionários da oficina.
+     """
+    CREATE TABLE IF NOT EXISTS mecanicos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        cpf TEXT UNIQUE,
+        endereco TEXT,  
+        telefone TEXT,
+        especialidade TEXT,
+        ativo BOOLEAN DEFAULT 1
+    );
+    """,    
+    
     # Tabela de Clientes: permanece a mesma, para os clientes da oficina.
     """
     CREATE TABLE IF NOT EXISTS clientes (
@@ -158,9 +172,13 @@ CREATE_TABLES_SQL = [
         cor TEXT,
         placa TEXT NOT NULL UNIQUE,
         cliente_id INTEGER,
+        ativo BOOLEAN DEFAULT 1,
+        UNIQUE (placa),
         FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
     );
     """,
+    
+    # --- Tabela de Peças: permanece a mesma, para o inventário de peças.
     """
     CREATE TABLE IF NOT EXISTS pecas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -170,9 +188,35 @@ CREATE_TABLES_SQL = [
         descricao TEXT,
         preco_compra REAL NOT NULL,
         preco_venda REAL NOT NULL,
-        quantidade_em_estoque INTEGER NOT NULL CHECK (quantidade_em_estoque >= 0)
+        quantidade_em_estoque INTEGER NOT NULL CHECK (quantidade_em_estoque >= 0),
+        ativo BOOLEAN DEFAULT 1,
+        UNIQUE (nome, referencia) -- Garante que a combinação de nome e referência seja única
     );
     """,
+    # --- Tabela de Serviços: permanece a mesma, para os serviços oferecidos.
+    """
+    CREATE TABLE IF NOT EXISTS servicos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL UNIQUE,
+        descricao TEXT,
+        valor REAL NOT NULL,
+        ativo BOOLEAN DEFAULT 1
+    );
+    """,
+    # Tabela de Associação entre Serviços e Peças: permanece a mesma.
+    # Permite definir quais peças são usadas em quais serviços.
+    """
+    CREATE TABLE IF NOT EXISTS servicos_pecas (
+        servico_id INTEGER NOT NULL,
+        peca_id INTEGER NOT NULL,
+        PRIMARY KEY (servico_id, peca_id),
+        FOREIGN KEY (servico_id) REFERENCES servicos(id) ON DELETE CASCADE,
+        FOREIGN KEY (peca_id) REFERENCES pecas(id) ON DELETE CASCADE
+    );
+    """,
+    # --- Tabela de Ordens de Serviço: permanece a mesma, para registrar os serviços realizados.
+    
+    
     """
     CREATE TABLE IF NOT EXISTS ordem_servico (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -185,6 +229,8 @@ CREATE_TABLES_SQL = [
         FOREIGN KEY (carro_id) REFERENCES carros(id)
     );
     """,
+    # Tabela de Associação entre Ordens de Serviço e Serviços: permanece a mesma.
+    # Permite registrar quais serviços foram realizados em cada ordem.
     """
     CREATE TABLE IF NOT EXISTS PecasOrdemServico (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -195,6 +241,8 @@ CREATE_TABLES_SQL = [
         FOREIGN KEY (peca_id) REFERENCES pecas(id)
     );
     """,
+    # Tabela de Movimentação de Peças: permanece a mesma.
+    # Registra entradas e saídas de peças do estoque.
     """
     CREATE TABLE IF NOT EXISTS movimentacao_pecas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

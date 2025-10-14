@@ -12,18 +12,22 @@
 #     estrutura da tabela `usuarios` no banco de dados, resolvendo o
 #     `TypeError`.
 # =================================================================================
-from typing import Optional
+from typing import Optional, List
+
 
 class Estabelecimento:
     """Representa um estabelecimento (oficina) no sistema."""
+
     def __init__(self, id: int, nome: str):
         self.id: int = id
         self.nome: str = nome
+
 
 class Usuario:
     """Representa um usuário do sistema."""
     # --- CONSTRUTOR CORRIGIDO ---
     # Adicionado `id_estabelecimento: Optional[int]` para corresponder à tabela.
+
     def __init__(self, id: int, nome: str, senha: str, perfil: str, id_estabelecimento: Optional[int]):
         self.id: int = id
         self.nome: str = nome
@@ -31,6 +35,20 @@ class Usuario:
         self.perfil: str = perfil
         # Chave estrangeira que vincula o usuário a um estabelecimento.
         self.id_estabelecimento: Optional[int] = id_estabelecimento
+
+
+class Mecanico:
+    """Representa um mecânico ou profissional da oficina."""
+    # O construtor agora inclui os campos 'endereco' e 'telefone'
+
+    def __init__(self, id: int, nome: str, cpf: str, endereco: Optional[str], telefone: Optional[str], especialidade: Optional[str], ativo: bool = True):
+        self.id: int = id
+        self.nome: str = nome
+        self.cpf: str = cpf
+        self.endereco: Optional[str] = endereco
+        self.telefone: Optional[str] = telefone
+        self.especialidade: Optional[str] = especialidade
+        self.ativo: bool = ativo
 
 
 class Cliente:
@@ -64,6 +82,7 @@ class Carro:
         cor: Optional[str],
         placa: str,
         cliente_id: int,
+        ativo: bool = True,
     ):
         self.id: int = id
         self.modelo: str = modelo
@@ -71,6 +90,7 @@ class Carro:
         self.cor: Optional[str] = cor
         self.placa: str = placa
         self.cliente_id: int = cliente_id
+        self.ativo: bool = ativo
 
 
 class Peca:
@@ -86,6 +106,7 @@ class Peca:
         preco_compra: float,
         preco_venda: float,
         quantidade_em_estoque: int,
+        ativo: bool = True,
     ):
         self.id: int = id
         self.nome: str = nome
@@ -95,3 +116,16 @@ class Peca:
         self.preco_compra: float = preco_compra
         self.preco_venda: float = preco_venda
         self.quantidade_em_estoque: int = quantidade_em_estoque
+        # Flag para indicar se a peça está ativa (1) ou desativada (0).
+        self.ativo: bool = ativo
+
+class Servico:
+    """Representa um serviço ou um 'kit' de serviço prestado pela oficina."""
+    def __init__(self, id: int, nome: str, descricao: Optional[str], valor: float, ativo: bool = True):
+        self.id: int = id
+        self.nome: str = nome
+        self.descricao: Optional[str] = descricao
+        self.valor: float = valor
+        self.ativo: bool = ativo
+        # Este atributo será populado sob demanda pelas queries, não corresponde a uma coluna.
+        self.pecas: List[Peca] = []
