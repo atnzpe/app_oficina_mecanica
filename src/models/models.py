@@ -12,7 +12,7 @@
 #     estrutura da tabela `usuarios` no banco de dados, resolvendo o
 #     `TypeError`.
 # =================================================================================
-from typing import Optional
+from typing import Optional, List
 
 
 class Estabelecimento:
@@ -118,3 +118,14 @@ class Peca:
         self.quantidade_em_estoque: int = quantidade_em_estoque
         # Flag para indicar se a peça está ativa (1) ou desativada (0).
         self.ativo: bool = ativo
+
+class Servico:
+    """Representa um serviço ou um 'kit' de serviço prestado pela oficina."""
+    def __init__(self, id: int, nome: str, descricao: Optional[str], valor: float, ativo: bool = True):
+        self.id: int = id
+        self.nome: str = nome
+        self.descricao: Optional[str] = descricao
+        self.valor: float = valor
+        self.ativo: bool = ativo
+        # Este atributo será populado sob demanda pelas queries, não corresponde a uma coluna.
+        self.pecas: List[Peca] = []
