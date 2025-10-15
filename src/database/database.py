@@ -177,6 +177,8 @@ CREATE_TABLES_SQL = [
         FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
     );
     """,
+    
+    # --- Tabela de Peças: permanece a mesma, para o inventário de peças.
     """
     CREATE TABLE IF NOT EXISTS pecas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -191,6 +193,30 @@ CREATE_TABLES_SQL = [
         UNIQUE (nome, referencia) -- Garante que a combinação de nome e referência seja única
     );
     """,
+    # --- Tabela de Serviços: permanece a mesma, para os serviços oferecidos.
+    """
+    CREATE TABLE IF NOT EXISTS servicos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL UNIQUE,
+        descricao TEXT,
+        valor REAL NOT NULL,
+        ativo BOOLEAN DEFAULT 1
+    );
+    """,
+    # Tabela de Associação entre Serviços e Peças: permanece a mesma.
+    # Permite definir quais peças são usadas em quais serviços.
+    """
+    CREATE TABLE IF NOT EXISTS servicos_pecas (
+        servico_id INTEGER NOT NULL,
+        peca_id INTEGER NOT NULL,
+        PRIMARY KEY (servico_id, peca_id),
+        FOREIGN KEY (servico_id) REFERENCES servicos(id) ON DELETE CASCADE,
+        FOREIGN KEY (peca_id) REFERENCES pecas(id) ON DELETE CASCADE
+    );
+    """,
+    # --- Tabela de Ordens de Serviço: permanece a mesma, para registrar os serviços realizados.
+    
+    
     """
     CREATE TABLE IF NOT EXISTS ordem_servico (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -203,6 +229,8 @@ CREATE_TABLES_SQL = [
         FOREIGN KEY (carro_id) REFERENCES carros(id)
     );
     """,
+    # Tabela de Associação entre Ordens de Serviço e Serviços: permanece a mesma.
+    # Permite registrar quais serviços foram realizados em cada ordem.
     """
     CREATE TABLE IF NOT EXISTS PecasOrdemServico (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -213,6 +241,8 @@ CREATE_TABLES_SQL = [
         FOREIGN KEY (peca_id) REFERENCES pecas(id)
     );
     """,
+    # Tabela de Movimentação de Peças: permanece a mesma.
+    # Registra entradas e saídas de peças do estoque.
     """
     CREATE TABLE IF NOT EXISTS movimentacao_pecas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
