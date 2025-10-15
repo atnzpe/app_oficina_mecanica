@@ -16,6 +16,7 @@ from src.models.models import Usuario
 # Configura o logger para este módulo.
 logger = logging.getLogger(__name__)
 
+
 def _hash_password(password: str) -> str:
     """
     Gera um hash seguro para uma senha usando bcrypt.
@@ -27,6 +28,7 @@ def _hash_password(password: str) -> str:
     salt = bcrypt.gensalt()
     hashed_bytes = bcrypt.hashpw(password_bytes, salt)
     return hashed_bytes.decode('utf-8')
+
 
 def _verify_password(plain_password: str, hashed_password: str) -> bool:
     """
@@ -44,6 +46,7 @@ def _verify_password(plain_password: str, hashed_password: str) -> bool:
         logger.error(f"Erro ao verificar a senha (hash malformado?): {e}")
         return False
 
+
 def register_user(name: str, password: str, profile: str) -> tuple[bool, str]:
     """
     Registra um novo usuário no sistema.
@@ -56,7 +59,8 @@ def register_user(name: str, password: str, profile: str) -> tuple[bool, str]:
     logger.info(f"Tentativa de registro para o usuário: {name}")
     try:
         password_hash = _hash_password(password)
-        queries.criar_usuario(nome=name, senha_hash=password_hash, perfil=profile)
+        queries.criar_usuario(
+            nome=name, senha_hash=password_hash, perfil=profile)
         message = "Usuário cadastrado com sucesso!"
         logger.info(message)
         return True, message
@@ -68,6 +72,7 @@ def register_user(name: str, password: str, profile: str) -> tuple[bool, str]:
         message = "Ocorreu um erro inesperado durante o cadastro."
         logger.error(f"{message} Erro: {e}", exc_info=True)
         return False, message
+
 
 def authenticate_user(username: str, password: str) -> Usuario | None:
     """
@@ -84,7 +89,8 @@ def authenticate_user(username: str, password: str) -> Usuario | None:
     user_data = queries.buscar_usuario_por_nome(username)
 
     if user_data is None:
-        logger.warning(f"Tentativa de login falhou: usuário '{username}' não encontrado.")
+        logger.warning(
+            f"Tentativa de login falhou: usuário '{username}' não encontrado.")
         return None
 
     stored_hash = user_data.senha
@@ -93,5 +99,49 @@ def authenticate_user(username: str, password: str) -> Usuario | None:
         logger.info(f"Usuário '{username}' autenticado com sucesso.")
         return user_data
     else:
-        logger.warning(f"Tentativa de login falhou: senha incorreta para o usuário '{username}'.")
+        logger.warning(
+            f"Tentativa de login falhou: senha incorreta para o usuário '{username}'.")
         return None
+
+
+def alterar_senha(usuario: Usuario, senha_atual: str, nova_senha: str) -> tuple[bool, str]:
+    """
+    Altera a senha de um usuário logado após verificar a senha atual.
+    :param usuario: O objeto do usuário logado.
+    :param senha_atual: A senha atual fornecida pelo usuário.
+    :param nova_senha: A nova senha desejada.
+    :return: Uma tupla (bool, str) indicando sucesso e uma mensagem.
+    """
+    logger.info(
+        f"Tentativa de alteração de senha para o usuário: {usuario.nome}")
+
+    # 1. Verifica se a senha atual está correta
+    if not _verify_password(plain_password=senha_atual, hashed_password=usuario.senha):
+        mensagem = "A senha atual está incorreta."
+        logger.warning(
+            f"Falha na alteração de senha para '{usuario.nome}': {mensagem}")
+        return False, mensagem
+
+    try:
+        # 2. Gera o hash da nova senha
+        nova_senha_hash = _hash_password(nova_senha)
+
+        # 3. Atualiza a senha no banco de dados
+        sucesso = queries.atualizar_senha_usuario(usuario.id, nova_senha_hash)
+
+        if sucesso:
+            # 4. Registra o log de auditoria
+            queries.registrar_log_auditoria(usuario.id, "ALTERACAO_SENHA")
+            mensagem = "Senha alterada com sucesso!"
+            logger.info(
+                f"Senha do usuário '{usuario.nome}' alterada com sucesso.")
+            return True, mensagem
+        else:
+            mensagem = "Ocorreu um erro ao atualizar a senha no banco de dados."
+            logger.error(mensagem)
+            return False, mensagem
+
+    except Exception as e:
+        mensagem = "Ocorreu uma falha inesperada durante a alteração da senha."
+        logger.error(f"{mensagem} Erro: {e}", exc_info=True)
+        return False, mensagem

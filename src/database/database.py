@@ -254,7 +254,19 @@ CREATE_TABLES_SQL = [
         FOREIGN KEY (peca_id) REFERENCES pecas(id),
         FOREIGN KEY (ordem_servico_id) REFERENCES ordem_servico(id)
     );
+    """,
+    # Tabela de Auditoria
+    # Registra ações importantes realizadas no sistema.
     """
+    CREATE TABLE IF NOT EXISTS auditoria_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario_id INTEGER,
+        acao TEXT NOT NULL,
+        detalhes TEXT,
+        data_hora TEXT NOT NULL,
+        FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+    );
+    """,
 ]
 
 # --- FUNÇÃO DE INICIALIZAÇÃO DO BANCO DE DADOS ---
