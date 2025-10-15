@@ -36,8 +36,8 @@ from src.views.gerir_mecanicos_view import GerirMecanicosViewFactory
 from src.views.cadastro_mecanico_view import CadastroMecanicoViewFactory
 from src.views.editar_mecanico_view import EditarMecanicoViewFactory
 from src.views.gerir_servicos_view import GerirServicosViewFactory
-# from src.views.cadastro_servico_view import CadastroServicoViewFactory
-# from src.views.editar_servico_view import EditarServicoViewFactory
+from src.views.cadastro_servico_view import CadastroServicoViewFactory
+from src.views.editar_servico_view import EditarServicoViewFactory
 
 # Importações de Serviços e Banco de Dados
 from src.services.task_queue_service import processar_fila_db
@@ -159,11 +159,11 @@ def main(page: ft.Page):
         # --- NOVAS ROTAS DE SERVIÇOS ---
         elif page.route == "/gerir_servicos":
             page.views.append(GerirServicosViewFactory(page))
-        # elif page.route == "/cadastro_servico":
-            # page.views.append(CadastroServicoViewFactory(page))
-        # elif edit_servico_route:
-            # servico_id = int(edit_servico_route.group(1))
-            # page.views.append(EditarServicoViewFactory(page, servico_id=servico_id))
+        elif page.route == "/cadastro_servico":
+            page.views.append(CadastroServicoViewFactory(page))
+        elif edit_servico_route:
+            servico_id = int(edit_servico_route.group(1))
+            page.views.append(EditarServicoViewFactory(page, servico_id=servico_id))
 
         # --- Rotas de Ordem de Serviços ---
         elif page.route == "/nova_os":

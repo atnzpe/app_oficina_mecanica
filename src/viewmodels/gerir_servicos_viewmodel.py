@@ -65,3 +65,15 @@ class GerirServicosViewModel:
                     self._view.mostrar_feedback("Erro ao reativar o serviço.", False)
         finally:
             self._servico_para_acao_id = None
+        if self._servico_para_acao_id is None: return
+        try:
+            sucesso = queries.ativar_servico_por_id(self._servico_para_acao_id)
+            if self._view:
+                self._view.fechar_dialogo()
+                if sucesso:
+                    self._view.mostrar_feedback("Serviço reativado com sucesso!", True)
+                    self.carregar_servicos_iniciais()
+                else:
+                    self._view.mostrar_feedback("Erro ao reativar o serviço.", False)
+        finally:
+            self._servico_para_acao_id = None
