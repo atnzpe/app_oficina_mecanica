@@ -27,8 +27,8 @@ Ele oferece um controle completo sobre o fluxo de trabalho, desde o cadastro de 
 | **Gerenciamento de Carros** | ✅ | CRUD completo de veículos, associados aos seus proprietários. |
 | **Controle de Peças/Estoque** | ✅ | CRUD completo de peças, base para o controle de inventário. |
 | **Gestão de Mecânicos** | ✅ | CRUD completo para gerenciar os profissionais da oficina. |
-| **Gestão Administrativa** | 🚧 | CRUDs de Serviços, Usuários, Minha Conta e Estabelecimento. |
-| **Operações de Estoque** | 🚧 | Entrada e Saída avulsa de peças. |
+| **Gestão de Serviços** | ✅ | CRUD completo para gerenciar serviços e "kits" de peças. |
+| **Gestão Administrativa** | 🚧 | CRUDs de Usuários, Minha Conta e Estabelecimento. |
 | **Ordem de Serviço Completa** | 🚧 | Abertura e inclusão de peças/serviços. |
 
 ## **🏛️ Arquitetura e Conceitos Chave**
@@ -85,7 +85,7 @@ Nosso roadmap é gerenciado através das [**Issues do GitHub**](https://github.c
 * ✅ **Issue #20:** CRUD de Mecânicos.
 
 ### **FASE 2: Módulos Administrativos (Em Andamento)**
-* 🚧 **CRUD de Serviços:** Gerenciamento dos serviços prestados pela oficina.
+* ✅ **Issue #21: CRUD de Serviços (Concluído)**
 * 🚧 **CRUD de Minha Conta:** Permitir que o usuário logado altere seus próprios dados.
 * 🚧 **CRUD de Usuários:** Gerenciamento de contas de acesso ao sistema.
 * 🚧 **CRUD de Estabelecimento:** Gerenciar dados da oficina (logo, chave PIX).
@@ -100,13 +100,9 @@ Nosso roadmap é gerenciado através das [**Issues do GitHub**](https://github.c
 * ⏳ **Sistema de Alertas de Manutenção:** Notificações sobre revisões futuras.
 
 ### **FASE 5: Funcionalidades Futuras (Planejado)**
-* ⏳ **Issue #6:** Modernização da Autenticação (Login com Google).
-* ⏳ **Issue #5:** Sincronização na Nuvem (Firebase).
-* ⏳ **Issue #7:** Pipeline de Build Multiplataforma (Windows & Android).
-
-## **🤝 Contribuições**
-
-Contribuições são muito bem-vindas! Se você encontrar um bug ou tiver uma sugestão, por favor, abra uma [**Issue**](https://github.com/atnzpe/app_oficina_mecanica/issues).
+* ⏳ **Modernização da Autenticação:** Login com Google (Firebase Auth).
+* ⏳ **Sincronização na Nuvem:** Backup e sincronia via Firebase Firestore.
+* ⏳ **Pipeline de Build:** Geração de executáveis (.exe) e pacotes (.apk).
 
 ## **👨‍💻 Desenvolvedores**
 
