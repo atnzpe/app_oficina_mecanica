@@ -38,6 +38,7 @@ from src.views.editar_mecanico_view import EditarMecanicoViewFactory
 from src.views.gerir_servicos_view import GerirServicosViewFactory
 from src.views.cadastro_servico_view import CadastroServicoViewFactory
 from src.views.editar_servico_view import EditarServicoViewFactory
+from src.views.minha_conta_view import MinhaContaViewFactory
 
 # Importações de Serviços e Banco de Dados
 from src.services.task_queue_service import processar_fila_db
@@ -184,7 +185,7 @@ def main(page: ft.Page):
 
         # --- Rotas Administrativas ---
         elif page.route == "/minha_conta":
-            page.views.append(PlaceholderViewFactory(page, "Minha Conta"))
+            page.views.append(MinhaContaViewFactory(page))
         elif page.route == "/usuarios":
             page.views.append(PlaceholderViewFactory(
                 page, "Gerenciar Usuários"))
