@@ -1,64 +1,59 @@
 # =================================================================================
 # MÓDULO DO VIEWMODEL DE DADOS DA OFICINA (dados_oficina_viewmodel.py)
 #
-# OBJETIVO: Conter a lógica de negócio para a tela de gerenciamento dos dados
-#           do estabelecimento (Issue #30).
+# ATUALIZAÇÃO (Issue #30):
+#   - Adicionada a lógica de upload de logo (FilePicker, cópia de arquivo
+#     e atualização do banco).
 # =================================================================================
 import flet as ft
 import logging
+import shutil  # Importa a biblioteca para cópia de arquivos
 from src.database import queries
 from src.models.models import Estabelecimento
 from typing import Optional
 
-# Configura o logger para este módulo
 logger = logging.getLogger(__name__)
 
 
 class DadosOficinaViewModel:
-    """
-    ViewModel para a tela 'Dados da Oficina'.
-    """
-
     def __init__(self, page: ft.Page):
-        # Armazena a referência da página Flet para navegação e acesso à sessão
         self.page = page
-        # Referência fraca à View (será vinculada pela própria View)
         self._view: 'DadosOficinaView' | None = None
-        # Recupera o usuário logado da sessão da página
         self.usuario_logado = self.page.session.get("usuario_logado")
-        # Armazena os dados do estabelecimento carregado para saber qual ID atualizar
         self.estabelecimento: Optional[Estabelecimento] = None
+
+        # --- Lógica do FilePicker ---
+        # 1. Instancia o FilePicker
+        self._file_picker = ft.FilePicker(on_result=self._on_logo_selecionada)
+
         logger.debug("DadosOficinaViewModel inicializado.")
 
     def vincular_view(self, view: 'DadosOficinaView'):
-        """Permite que a View se vincule a este ViewModel."""
+        """Vincula a View ao ViewModel."""
         self._view = view
-        logger.debug("View 'Dados da Oficina' vinculada ao ViewModel.")
+        # 2. Adiciona o FilePicker à overlay da página (NECESSÁRIO)
+        if self._file_picker not in self.page.overlay:
+            self.page.overlay.append(self._file_picker)
+            self.page.update()
 
     def carregar_dados(self):
         """Busca os dados do estabelecimento e comanda a View para preencher o formulário."""
-        # Verifica se a view e o usuário estão disponíveis
         if not self._view or not self.usuario_logado:
-            logger.warning(
-                "ViewModel: View ou Usuário não vinculados. Carregamento abortado.")
             return
 
         try:
             logger.info(
                 f"ViewModel: buscando dados do estabelecimento para o usuário ID {self.usuario_logado.id}")
-            # 1. INTERAÇÃO COM CAMADA DE DADOS
             self.estabelecimento = queries.obter_estabelecimento_por_id_usuario(
                 self.usuario_logado.id)
 
             if self.estabelecimento:
-                # 2. COMANDA A VIEW
-                # Se encontrou, comanda a View para preencher os campos
                 self._view.preencher_formulario(self.estabelecimento)
-                logger.info(
-                    f"ViewModel: Dados do estabelecimento '{self.estabelecimento.nome}' carregados.")
+                # Comanda a view para exibir a logo que está no banco
+                if self.estabelecimento.logo_path:
+                    self._view.atualizar_logo_exibida(
+                        self.estabelecimento.logo_path)
             else:
-                logger.warning(
-                    "ViewModel: Nenhum estabelecimento encontrado para o usuário logado.")
                 self._view.mostrar_dialogo_feedback(
                     "Erro", "Nenhum estabelecimento encontrado.")
         except Exception as e:
@@ -69,44 +64,80 @@ class DadosOficinaViewModel:
                     "Erro Crítico", f"Não foi possível carregar os dados.\nErro: {e}")
 
     def salvar_alteracoes(self):
-        """Valida os dados do formulário e salva as alterações no banco de dados."""
+        """Valida e salva as alterações de *texto* no banco de dados."""
+        # (Lógica de salvar os campos de texto permanece a mesma)
         if not self._view or not self.estabelecimento:
-            logger.error(
-                "ViewModel: Tentativa de salvar sem View ou Estabelecimento carregado.")
             return
-
         try:
-            # 1. SOLICITA DADOS DA VIEW
             dados = self._view.obter_dados_formulario()
-
-            # 2. LÓGICA DE VALIDAÇÃO
             if not dados.get("nome", "").strip():
                 self._view.mostrar_dialogo_feedback(
                     "Erro de Validação", "O campo 'Nome da Oficina' é obrigatório.")
                 return
-
             logger.info(
-                f"ViewModel: salvando alterações para o estabelecimento ID {self.estabelecimento.id}")
-
-            # 3. INTERAÇÃO COM CAMADA DE DADOS
+                f"ViewModel: salvando alterações de texto para o ID {self.estabelecimento.id}")
             sucesso = queries.atualizar_estabelecimento(
                 self.estabelecimento.id, dados)
 
-            # 4. PREPARA O FEEDBACK
-            # Define a ação de navegação que será executada após o diálogo fechar
             def acao_navegacao(): return self.page.go("/dashboard")
-
-            # 5. COMANDA A VIEW
             if sucesso:
                 self._view.mostrar_dialogo_feedback(
                     "Sucesso!", "Dados da oficina atualizados com sucesso!", acao_navegacao)
             else:
                 self._view.mostrar_dialogo_feedback(
-                    "Atenção", "Nenhuma alteração foi salva (os dados podem ser os mesmos).")
-
+                    "Atenção", "Nenhuma alteração foi salva.", acao_navegacao)
         except Exception as e:
             logger.error(
                 f"Erro crítico ao salvar alterações: {e}", exc_info=True)
             if self._view:
                 self._view.mostrar_dialogo_feedback(
                     "Erro Crítico", f"Não foi possível salvar as alterações.\nErro: {e}")
+
+    # --- NOVOS MÉTODOS PARA UPLOAD DA LOGO ---
+
+    def abrir_seletor_logo(self, e):
+        """Comanda a View (FilePicker) para abrir o seletor de arquivos."""
+        logger.debug("ViewModel: Abrindo seletor de arquivos para logo.")
+        self._file_picker.pick_files(
+            allow_multiple=False,
+            allowed_extensions=["png", "jpg", "jpeg"],
+            dialog_title="Selecione a logo da oficina"
+        )
+
+    def _on_logo_selecionada(self, e: ft.FilePickerResultEvent):
+        """Callback executado quando o usuário seleciona um arquivo."""
+        if not self._view or not self.estabelecimento:
+            return
+
+        # 1. Verifica se um arquivo foi realmente selecionado
+        if e.files and len(e.files) > 0:
+            arquivo_selecionado = e.files[0]
+            caminho_origem = arquivo_selecionado.path
+            nome_arquivo = f"logo_oficina_{self.estabelecimento.id}.{arquivo_selecionado.name.split('.')[-1]}"
+
+            # 2. Define o caminho de destino (dentro do projeto)
+            caminho_destino = f"assets/uploads/{nome_arquivo}"
+
+            logger.info(
+                f"ViewModel: Logo selecionada. Copiando de '{caminho_origem}' para '{caminho_destino}'.")
+
+            try:
+                # 3. Copia o arquivo
+                shutil.copy(caminho_origem, caminho_destino)
+
+                # 4. Atualiza o banco de dados com o NOVO caminho
+                queries.atualizar_logo_estabelecimento(
+                    self.estabelecimento.id, caminho_destino)
+
+                # 5. Comanda a View para exibir a nova imagem
+                self._view.atualizar_logo_exibida(caminho_destino)
+                self._view.mostrar_dialogo_feedback(
+                    "Sucesso!", "Logo atualizada com sucesso.")
+
+            except Exception as ex:
+                logger.error(
+                    f"Falha ao copiar ou salvar o arquivo da logo: {ex}", exc_info=True)
+                self._view.mostrar_dialogo_feedback(
+                    "Erro de Upload", f"Não foi possível salvar a imagem.\nErro: {ex}")
+        else:
+            logger.debug("ViewModel: Seletor de arquivos fechado sem seleção.")

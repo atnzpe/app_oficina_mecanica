@@ -238,14 +238,9 @@ def obter_estabelecimento_por_id_usuario(usuario_id: int) -> Estabelecimento | N
 
 def atualizar_estabelecimento(estabelecimento_id: int, dados: dict) -> bool:
     """
-    Atualiza os dados de um estabelecimento específico no banco de dados.
-    :param estabelecimento_id: O ID do estabelecimento a ser atualizado.
-    :param dados: Um dicionário contendo todos os novos dados.
-    :return: True se a atualização foi bem-sucedida, False caso contrário.
+    Atualiza os dados de texto de um estabelecimento (sem a logo).
     """
-    logger.info(
-        f"Executando query para atualizar estabelecimento ID: {estabelecimento_id}")
-    # Query SQL parametrizada para atualizar todos os campos
+    logger.info(f"Executando query para atualizar dados do estabelecimento ID: {estabelecimento_id}")
     sql = """
         UPDATE estabelecimentos SET
             nome = ?, endereco = ?, telefone = ?, responsavel = ?,
@@ -255,20 +250,32 @@ def atualizar_estabelecimento(estabelecimento_id: int, dados: dict) -> bool:
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            # Executa a atualização
             cursor.execute(sql, (
                 dados['nome'], dados['endereco'], dados['telefone'],
                 dados['responsavel'], dados['cpf_cnpj'], dados['chave_pix'],
                 estabelecimento_id
             ))
-            # Confirma (salva) a transação no banco
             conn.commit()
-            # Retorna True se pelo menos uma linha foi afetada (ou seja, a atualização ocorreu)
             return cursor.rowcount > 0
     except sqlite3.Error as e:
-        # Log detalhado em caso de falha na atualização
-        logger.error(
-            f"Erro ao atualizar estabelecimento ID {estabelecimento_id}: {e}", exc_info=True)
+        logger.error(f"Erro ao atualizar estabelecimento ID {estabelecimento_id}: {e}", exc_info=True)
+        return False
+
+
+def atualizar_logo_estabelecimento(estabelecimento_id: int, logo_path: str) -> bool:
+    """
+    Atualiza apenas o caminho da logo de um estabelecimento.
+    """
+    logger.info(f"Executando query para atualizar logo do estabelecimento ID: {estabelecimento_id}")
+    sql = "UPDATE estabelecimentos SET logo_path = ? WHERE id = ?"
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, (logo_path, estabelecimento_id))
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao atualizar logo do estabelecimento ID {estabelecimento_id}: {e}", exc_info=True)
         return False
 
 
