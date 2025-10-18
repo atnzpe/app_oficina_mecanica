@@ -17,7 +17,7 @@
 import logging
 import sqlite3
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 # --- IMPORTAÇÕES DO PROJETO ---
 
@@ -852,6 +852,55 @@ def quantidade_em_estoque_suficiente(peca_id: int, quantidade_necessaria: int) -
             f"Erro ao verificar a quantidade em estoque da peça {peca_id}: {e}", exc_info=True)
         return False
 
+def registrar_entrada_estoque(peca_id: int, quantidade: int, valor_custo: Optional[float], descricao: Optional[str]) -> bool:
+    """
+    Registra uma entrada de peças no estoque.
+    Executa duas operações em uma única transação:
+    1. Atualiza a quantidade na tabela 'pecas'.
+    2. Insere o registro na tabela 'movimentacao_pecas'.
+    """
+    # Log de início da transação
+    logger.info(f"Iniciando transação de entrada de estoque para Peca ID: {peca_id}, Qtd: {quantidade}")
+    
+    # Obtém a conexão manualmente para controlar a transação
+    conn = get_db_connection()
+    if not conn:
+        logger.error("Falha ao obter conexão com o banco para registrar entrada.")
+        return False
+    
+    try:
+        cursor = conn.cursor()
+        
+        # 1. Atualiza o estoque na tabela 'pecas' (soma a quantidade)
+        sql_update_peca = "UPDATE pecas SET quantidade_em_estoque = quantidade_em_estoque + ? WHERE id = ?"
+        cursor.execute(sql_update_peca, (quantidade, peca_id))
+        logger.debug(f"Estoque da Peca ID: {peca_id} atualizado no banco.")
+        
+        # 2. Registra a movimentação de 'entrada'
+        sql_insert_mov = """
+            INSERT INTO movimentacao_pecas 
+                (peca_id, data_movimentacao, tipo_movimentacao, quantidade, valor_custo, descricao) 
+            VALUES (?, ?, 'entrada', ?, ?, ?)
+        """
+        data_hora_atual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        cursor.execute(sql_insert_mov, (peca_id, data_hora_atual, quantidade, valor_custo, descricao))
+        logger.debug(f"Registro de movimentação de entrada criado para Peca ID: {peca_id}.")
+        
+        # 3. Confirma a transação
+        conn.commit()
+        logger.info(f"Transação de entrada de estoque para Peca ID: {peca_id} concluída com sucesso.")
+        return True
+        
+    except sqlite3.Error as e:
+        # Em caso de qualquer erro, desfaz toda a operação
+        logger.error(f"Erro na transação de entrada de estoque: {e}", exc_info=True)
+        conn.rollback()
+        return False
+    finally:
+        # Garante que a conexão seja fechada
+        if conn:
+            conn.close()
+            
 # =================================================================================
 # QUERIES DE SERVIÇOS
 # =================================================================================
