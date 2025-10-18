@@ -22,14 +22,16 @@ Ele oferece um controle completo sobre o fluxo de trabalho, desde o cadastro de 
 | :--- | :--- | :--- |
 | **Arquitetura MVVM Robusta** | ✅ | O código está 100% refatorado, separando UI, lógica e dados. |
 | **Fluxo de Autenticação Seguro** | ✅ | Cadastro do 1º admin, login com bcrypt, e navegação por rotas. |
-| **Onboarding Inteligente** | ✅ | Guia o novo usuário na configuração inicial da oficina. |
+| **Onboarding Inteligente** | ✅ | Guia o novo usuário na configuração inicial completa da oficina. |
 | **Gestão de Clientes** | ✅ | CRUD completo, com busca e gerenciamento de status (ativo/inativo). |
 | **Gerenciamento de Carros** | ✅ | CRUD completo de veículos, associados aos seus proprietários. |
 | **Controle de Peças/Estoque** | ✅ | CRUD completo de peças, base para o controle de inventário. |
 | **Gestão de Mecânicos** | ✅ | CRUD completo para gerenciar os profissionais da oficina. |
 | **Gestão de Serviços** | ✅ | CRUD completo para gerenciar serviços e "kits" de peças. |
-| **Gestão Administrativa** | 🚧 | CRUDs de Usuários, Minha Conta e Estabelecimento. |
+| **Gestão de Conta de Usuário** | ✅ | Permite ao usuário logado alterar a própria senha. |
+| **Gestão do Estabelecimento** | ✅ | Permite ao admin configurar/editar os dados da oficina (PIX, Endereço, etc). |
 | **Ordem de Serviço Completa** | 🚧 | Abertura e inclusão de peças/serviços. |
+| **Gestão Administrativa** | 🚧 | CRUD de Usuários. |
 
 ## **🏛️ Arquitetura e Conceitos Chave**
 
@@ -84,11 +86,10 @@ Nosso roadmap é gerenciado através das [**Issues do GitHub**](https://github.c
 * ✅ **Issue #18:** CRUD de Peças.
 * ✅ **Issue #20:** CRUD de Mecânicos.
 
-### **FASE 2: Módulos Administrativos (Em Andamento)**
+### **FASE 2: Módulos Administrativos (Concluída)**
 * ✅ **Issue #21: CRUD de Serviços (Concluído)**
-* 🚧 **CRUD de Minha Conta:** Permitir que o usuário logado altere seus próprios dados.
-* 🚧 **CRUD de Usuários:** Gerenciamento de contas de acesso ao sistema.
-* 🚧 **CRUD de Estabelecimento:** Gerenciar dados da oficina (logo, chave PIX).
+* ✅ **Issue #29: CRUD de Minha Conta (Concluído)**
+* ✅ **Issue #30: CRUD de Estabelecimento (Concluído)**
 
 ### **FASE 3: Módulos Operacionais (Planejado)**
 * ⏳ **Entrada de Peças:** Registrar a compra de novas peças.
@@ -103,6 +104,7 @@ Nosso roadmap é gerenciado através das [**Issues do GitHub**](https://github.c
 * ⏳ **Modernização da Autenticação:** Login com Google (Firebase Auth).
 * ⏳ **Sincronização na Nuvem:** Backup e sincronia via Firebase Firestore.
 * ⏳ **Pipeline de Build:** Geração de executáveis (.exe) e pacotes (.apk).
+* ⏳ **CRUD de Usuários:** Gerenciamento de contas de acesso ao sistema (Admin, Mecânico).
 
 ## **👨‍💻 Desenvolvedores**
 

@@ -87,6 +87,40 @@ def criar_usuario(nome: str, senha_hash: str, perfil: str):
         raise
 
 
+def atualizar_senha_usuario(usuario_id: int, nova_senha_hash: str) -> bool:
+    """Atualiza a senha de um usuário específico no banco de dados."""
+    logger.info(
+        f"Executando query para atualizar a senha do usuário ID: {usuario_id}")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE usuarios SET senha = ? WHERE id = ?",
+                (nova_senha_hash, usuario_id)
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(
+            f"Erro ao atualizar senha do usuário ID {usuario_id}: {e}", exc_info=True)
+        return False
+
+
+def registrar_log_auditoria(usuario_id: int, acao: str, detalhes: str = ""):
+    """Registra um evento de auditoria no banco de dados."""
+    logger.info(
+        f"Registrando log de auditoria para o usuário ID {usuario_id}. Ação: {acao}")
+    sql = "INSERT INTO auditoria_logs (usuario_id, acao, detalhes, data_hora) VALUES (?, ?, ?, ?)"
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            data_hora_atual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            cursor.execute(sql, (usuario_id, acao, detalhes, data_hora_atual))
+            conn.commit()
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao registrar log de auditoria: {e}", exc_info=True)
+
+
 def has_establishment(user_id: int) -> bool:
     """
     Verifica se um usuário já está vinculado a um estabelecimento.
@@ -110,29 +144,40 @@ def has_establishment(user_id: int) -> bool:
         return True
 
 
-def complete_onboarding(user_id: int, user_name: str, establishment_name: str):
+def complete_onboarding(user_id: int, user_name: str, dados_estabelecimento: dict):
     """
     Salva os dados do onboarding.
-    1. Cria o novo estabelecimento.
+    1. Cria o novo estabelecimento com todos os dados.
     2. Vincula o ID do novo estabelecimento ao usuário.
     3. Atualiza o nome do usuário.
     """
     logger.info(
         f"Iniciando transação de onboarding para o usuário ID {user_id}.")
-    # Abre a conexão manualmente para controlar a transação.
     conn = get_db_connection()
     if not conn:
+        logger.error("Falha ao obter conexão com o banco para onboarding.")
         return
 
     try:
         cursor = conn.cursor()
 
-        # 1. Cria o novo estabelecimento.
-        cursor.execute(
-            "INSERT INTO estabelecimentos (nome) VALUES (?)", (establishment_name,))
+        # 1. Cria o novo estabelecimento com todos os dados detalhados.
+        sql_insert_est = """
+            INSERT INTO estabelecimentos (
+                nome, endereco, telefone, responsavel, cpf_cnpj, chave_pix
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        """
+        cursor.execute(sql_insert_est, (
+            dados_estabelecimento['nome'],
+            dados_estabelecimento['endereco'],
+            dados_estabelecimento['telefone'],
+            dados_estabelecimento['responsavel'],
+            dados_estabelecimento['cpf_cnpj'],
+            dados_estabelecimento['chave_pix']
+        ))
         establishment_id = cursor.lastrowid
         logger.debug(
-            f"Estabelecimento '{establishment_name}' criado com ID: {establishment_id}.")
+            f"Estabelecimento '{dados_estabelecimento['nome']}' criado com ID: {establishment_id}.")
 
         # 2. Vincula o estabelecimento ao usuário e atualiza o nome.
         cursor.execute(
@@ -150,11 +195,89 @@ def complete_onboarding(user_id: int, user_name: str, establishment_name: str):
         logger.error(
             f"Erro ao salvar dados do onboarding. A transação será revertida (rollback): {e}", exc_info=True)
         conn.rollback()
-        # Re-levanta a exceção para o ViewModel saber que algo deu errado.
         raise
     finally:
         if conn:
             conn.close()
+
+# =================================================================================
+# QUERIES DE ESTABELECIMENTO (NOVO)
+# =================================================================================
+
+
+def obter_estabelecimento_por_id_usuario(usuario_id: int) -> Estabelecimento | None:
+    """
+    Busca os dados do estabelecimento vinculado a um ID de usuário.
+    É usado para carregar a tela 'Dados da Oficina'.
+    :param usuario_id: O ID do usuário logado.
+    :return: Um objeto Estabelecimento ou None.
+    """
+    # Log para registrar o início da busca
+    logger.debug(f"Buscando estabelecimento para o usuário ID: {usuario_id}")
+    # SQL para juntar tabelas de usuarios e estabelecimentos
+    sql = """
+        SELECT e.* FROM estabelecimentos e
+        JOIN usuarios u ON u.id_estabelecimento = e.id
+        WHERE u.id = ?
+    """
+    try:
+        # Garante o gerenciamento seguro da conexão
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            # Executa a query com o ID do usuário
+            result = cursor.execute(sql, (usuario_id,)).fetchone()
+            # Se um resultado for encontrado, converte o sqlite3.Row em um objeto Estabelecimento
+            # A classe Estabelecimento deve ter sido atualizada para aceitar os novos campos no __init__
+            return Estabelecimento(**result) if result else None
+    except Exception as e:
+        # Log detalhado em caso de falha na consulta
+        logging.error(
+            f"Erro ao obter estabelecimento por ID de usuário {usuario_id}: {e}", exc_info=True)
+        return None
+
+
+def atualizar_estabelecimento(estabelecimento_id: int, dados: dict) -> bool:
+    """
+    Atualiza os dados de texto de um estabelecimento (sem a logo).
+    """
+    logger.info(f"Executando query para atualizar dados do estabelecimento ID: {estabelecimento_id}")
+    sql = """
+        UPDATE estabelecimentos SET
+            nome = ?, endereco = ?, telefone = ?, responsavel = ?,
+            cpf_cnpj = ?, chave_pix = ?
+        WHERE id = ?
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, (
+                dados['nome'], dados['endereco'], dados['telefone'],
+                dados['responsavel'], dados['cpf_cnpj'], dados['chave_pix'],
+                estabelecimento_id
+            ))
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao atualizar estabelecimento ID {estabelecimento_id}: {e}", exc_info=True)
+        return False
+
+
+def atualizar_logo_estabelecimento(estabelecimento_id: int, logo_path: str) -> bool:
+    """
+    Atualiza apenas o caminho da logo de um estabelecimento.
+    """
+    logger.info(f"Executando query para atualizar logo do estabelecimento ID: {estabelecimento_id}")
+    sql = "UPDATE estabelecimentos SET logo_path = ? WHERE id = ?"
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql, (logo_path, estabelecimento_id))
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao atualizar logo do estabelecimento ID {estabelecimento_id}: {e}", exc_info=True)
+        return False
+
 
 # =================================================================================
 # QUERIES DE MECÂNICOS (NOVO)
@@ -730,8 +853,9 @@ def quantidade_em_estoque_suficiente(peca_id: int, quantidade_necessaria: int) -
         return False
 
 # =================================================================================
-# QUERIES DE SERVIÇOS 
+# QUERIES DE SERVIÇOS
 # =================================================================================
+
 
 def criar_servico(nome: str, descricao: str, valor: float, pecas_ids: list) -> Servico | None:
     """
@@ -741,10 +865,10 @@ def criar_servico(nome: str, descricao: str, valor: float, pecas_ids: list) -> S
     conn = get_db_connection()
     if not conn:
         return None
-    
+
     try:
         cursor = conn.cursor()
-        
+
         # 1. Insere o serviço principal
         sql_servico = "INSERT INTO servicos (nome, descricao, valor) VALUES (?, ?, ?)"
         cursor.execute(sql_servico, (nome, descricao, valor))
@@ -756,19 +880,23 @@ def criar_servico(nome: str, descricao: str, valor: float, pecas_ids: list) -> S
             sql_pecas = "INSERT INTO servicos_pecas (servico_id, peca_id) VALUES (?, ?)"
             dados_juncao = [(novo_id, peca_id) for peca_id in pecas_ids]
             cursor.executemany(sql_pecas, dados_juncao)
-            logger.debug(f"Associadas {len(dados_juncao)} peças ao serviço ID: {novo_id}.")
+            logger.debug(
+                f"Associadas {len(dados_juncao)} peças ao serviço ID: {novo_id}.")
 
         conn.commit()
-        logger.info(f"Serviço '{nome}' e suas associações de peças criados com sucesso.")
+        logger.info(
+            f"Serviço '{nome}' e suas associações de peças criados com sucesso.")
         return Servico(id=novo_id, nome=nome, descricao=descricao, valor=valor, ativo=True)
 
     except sqlite3.Error as e:
-        logger.error(f"Erro ao criar serviço '{nome}'. Transação revertida.", exc_info=True)
+        logger.error(
+            f"Erro ao criar serviço '{nome}'. Transação revertida.", exc_info=True)
         conn.rollback()
         raise
     finally:
         if conn:
             conn.close()
+
 
 def buscar_servicos_por_termo(termo: str) -> List[Servico]:
     """Busca serviços (ativos e inativos) por nome ou descrição."""
@@ -784,6 +912,7 @@ def buscar_servicos_por_termo(termo: str) -> List[Servico]:
         logger.error(f"Erro ao buscar serviços por termo: {e}", exc_info=True)
         return []
 
+
 def obter_servico_por_id(servico_id: int) -> Servico | None:
     """Busca um único serviço pelo seu ID, incluindo as peças associadas."""
     logger.debug(f"Buscando serviço completo pelo ID: {servico_id}")
@@ -792,10 +921,11 @@ def obter_servico_por_id(servico_id: int) -> Servico | None:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             # Busca o serviço principal
-            result_servico = cursor.execute("SELECT * FROM servicos WHERE id = ?", (servico_id,)).fetchone()
+            result_servico = cursor.execute(
+                "SELECT * FROM servicos WHERE id = ?", (servico_id,)).fetchone()
             if not result_servico:
                 return None
-            
+
             servico = Servico(**result_servico)
 
             # Busca as peças associadas
@@ -806,18 +936,22 @@ def obter_servico_por_id(servico_id: int) -> Servico | None:
             """
             result_pecas = cursor.execute(sql_pecas, (servico_id,)).fetchall()
             servico.pecas = [Peca(**row) for row in result_pecas]
-            
+
             return servico
     except Exception as e:
-        logging.error(f"Erro ao obter serviço completo por ID {servico_id}: {e}", exc_info=True)
+        logging.error(
+            f"Erro ao obter serviço completo por ID {servico_id}: {e}", exc_info=True)
         return None
+
 
 def atualizar_servico(servico_id: int, nome: str, descricao: str, valor: float, pecas_ids: list) -> bool:
     """Atualiza os dados de um serviço e suas peças associadas em uma transação."""
-    logger.info(f"Iniciando transação para atualizar o serviço ID: {servico_id}")
+    logger.info(
+        f"Iniciando transação para atualizar o serviço ID: {servico_id}")
     conn = get_db_connection()
-    if not conn: return False
-    
+    if not conn:
+        return False
+
     try:
         cursor = conn.cursor()
         # 1. Atualiza a tabela principal de serviços
@@ -826,28 +960,34 @@ def atualizar_servico(servico_id: int, nome: str, descricao: str, valor: float, 
             (nome, descricao, valor, servico_id)
         )
         logger.debug(f"Tabela 'servicos' para o ID {servico_id} atualizada.")
-        
+
         # 2. Remove todas as associações de peças existentes para este serviço
-        cursor.execute("DELETE FROM servicos_pecas WHERE servico_id = ?", (servico_id,))
-        logger.debug(f"Associações de peças antigas para o serviço ID {servico_id} removidas.")
+        cursor.execute(
+            "DELETE FROM servicos_pecas WHERE servico_id = ?", (servico_id,))
+        logger.debug(
+            f"Associações de peças antigas para o serviço ID {servico_id} removidas.")
 
         # 3. Se houver novas peças selecionadas, insere as novas associações
         if pecas_ids:
             sql_pecas = "INSERT INTO servicos_pecas (servico_id, peca_id) VALUES (?, ?)"
             dados_juncao = [(servico_id, peca_id) for peca_id in pecas_ids]
             cursor.executemany(sql_pecas, dados_juncao)
-            logger.debug(f"{len(dados_juncao)} novas associações de peças inseridas para o serviço ID: {servico_id}.")
+            logger.debug(
+                f"{len(dados_juncao)} novas associações de peças inseridas para o serviço ID: {servico_id}.")
 
         conn.commit()
-        logger.info(f"Serviço ID {servico_id} e suas associações atualizados com sucesso.")
+        logger.info(
+            f"Serviço ID {servico_id} e suas associações atualizados com sucesso.")
         return True
     except sqlite3.Error as e:
-        logger.error(f"Erro ao atualizar serviço ID {servico_id}. Transação revertida.", exc_info=True)
+        logger.error(
+            f"Erro ao atualizar serviço ID {servico_id}. Transação revertida.", exc_info=True)
         conn.rollback()
         raise
     finally:
         if conn:
             conn.close()
+
 
 def desativar_servico_por_id(servico_id: int) -> bool:
     """Realiza a exclusão lógica de um serviço."""
@@ -855,12 +995,15 @@ def desativar_servico_por_id(servico_id: int) -> bool:
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("UPDATE servicos SET ativo = 0 WHERE id = ?", (servico_id,))
+            cursor.execute(
+                "UPDATE servicos SET ativo = 0 WHERE id = ?", (servico_id,))
             conn.commit()
             return cursor.rowcount > 0
     except sqlite3.Error as e:
-        logger.error(f"Erro ao desativar serviço ID {servico_id}: {e}", exc_info=True)
+        logger.error(
+            f"Erro ao desativar serviço ID {servico_id}: {e}", exc_info=True)
         return False
+
 
 def ativar_servico_por_id(servico_id: int) -> bool:
     """Reativa um serviço."""
@@ -868,11 +1011,13 @@ def ativar_servico_por_id(servico_id: int) -> bool:
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("UPDATE servicos SET ativo = 1 WHERE id = ?", (servico_id,))
+            cursor.execute(
+                "UPDATE servicos SET ativo = 1 WHERE id = ?", (servico_id,))
             conn.commit()
             return cursor.rowcount > 0
     except sqlite3.Error as e:
-        logger.error(f"Erro ao ativar serviço ID {servico_id}: {e}", exc_info=True)
+        logger.error(
+            f"Erro ao ativar serviço ID {servico_id}: {e}", exc_info=True)
         return False
 
 # =================================================================================

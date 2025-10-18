@@ -17,10 +17,21 @@ from typing import Optional, List
 
 class Estabelecimento:
     """Representa um estabelecimento (oficina) no sistema."""
-
-    def __init__(self, id: int, nome: str):
+    def __init__(self, id: int, nome: str,
+                 endereco: Optional[str] = None,
+                 telefone: Optional[str] = None,
+                 responsavel: Optional[str] = None,
+                 cpf_cnpj: Optional[str] = None,
+                 logo_path: Optional[str] = None,
+                 chave_pix: Optional[str] = None):
         self.id: int = id
         self.nome: str = nome
+        self.endereco: Optional[str] = endereco
+        self.telefone: Optional[str] = telefone
+        self.responsavel: Optional[str] = responsavel
+        self.cpf_cnpj: Optional[str] = cpf_cnpj
+        self.logo_path: Optional[str] = logo_path
+        self.chave_pix: Optional[str] = chave_pix
 
 
 class Usuario:
@@ -119,8 +130,10 @@ class Peca:
         # Flag para indicar se a peça está ativa (1) ou desativada (0).
         self.ativo: bool = ativo
 
+
 class Servico:
     """Representa um serviço ou um 'kit' de serviço prestado pela oficina."""
+
     def __init__(self, id: int, nome: str, descricao: Optional[str], valor: float, ativo: bool = True):
         self.id: int = id
         self.nome: str = nome
