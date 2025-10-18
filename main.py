@@ -40,6 +40,7 @@ from src.views.cadastro_servico_view import CadastroServicoViewFactory
 from src.views.editar_servico_view import EditarServicoViewFactory
 from src.views.minha_conta_view import MinhaContaViewFactory
 from src.views.dados_oficina_view import DadosOficinaViewFactory
+from src.views.entrada_pecas_view import EntradaPecasViewFactory
 
 # Importações de Serviços e Banco de Dados
 from src.services.task_queue_service import processar_fila_db
@@ -178,7 +179,8 @@ def main(page: ft.Page):
 
         # --- Rotas de Consultas e Relatórios ---
         elif page.route == "/entrada_pecas":
-            page.views.append(PlaceholderViewFactory(page, "Entrada de Peças"))
+            # --- ROTA ATIVADA ---
+            page.views.append(EntradaPecasViewFactory(page))
         elif page.route == "/estoque":
             page.views.append(PlaceholderViewFactory(page, "Estoque"))
         elif page.route == "/relatorios":
@@ -187,9 +189,9 @@ def main(page: ft.Page):
         # --- Rotas Administrativas ---
         elif page.route == "/minha_conta":
             page.views.append(MinhaContaViewFactory(page))
-        elif page.route == "/usuarios":
-            page.views.append(PlaceholderViewFactory(
-                page, "Gerenciar Usuários"))
+        #elif page.route == "/usuarios":
+            #page.views.append(PlaceholderViewFactory(
+                #page, "Gerenciar Usuários"))
         elif page.route == "/dados_oficina":
             # --- ROTA ATIVADA ---
             # Substitui o placeholder pela factory real

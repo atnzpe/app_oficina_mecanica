@@ -57,15 +57,17 @@ class DashboardView(ft.Column):
                 cor=ft.Colors.INDIGO_800,
                 conteudo=[
                     self._criar_sub_item(
-                        "Peças e Estoque", ft.Icons.INVENTORY_2_OUTLINED, "/gerir_pecas"),
+                        "Entrada de Produto", ft.Icons.INPUT_OUTLINED, "/entrada_pecas"),
+                    self._criar_sub_item(
+                        "Cadastro de Produto", ft.Icons.INVENTORY_2_OUTLINED, "/gerir_pecas"),
                     self._criar_sub_item(
                         "Mecânicos", ft.Icons.ENGINEERING_OUTLINED, "/gerir_mecanicos"),
                     self._criar_sub_item(
                         "Serviços", ft.Icons.MISCELLANEOUS_SERVICES_OUTLINED, "/gerir_servicos"),
                     self._criar_sub_item(
                         "Minha Conta", ft.Icons.ACCOUNT_CIRCLE_OUTLINED, "/minha_conta"),
-                    self._criar_sub_item(
-                        "Usuários", ft.Icons.ADMIN_PANEL_SETTINGS_OUTLINED, "/usuarios"),
+                    #self._criar_sub_item(
+                        #"Usuários", ft.Icons.ADMIN_PANEL_SETTINGS_OUTLINED, "/usuarios"),
                     self._criar_sub_item(
                         "Dados da Oficina", ft.Icons.STORE_OUTLINED, "/dados_oficina"),
                     self._criar_sub_item(

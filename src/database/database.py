@@ -257,6 +257,8 @@ CREATE_TABLES_SQL = [
         data_movimentacao TEXT NOT NULL,
         tipo_movimentacao TEXT NOT NULL CHECK (tipo_movimentacao IN ('entrada', 'saida')),
         quantidade INTEGER NOT NULL,
+        valor_custo REAL,
+        descricao TEXT,
         ordem_servico_id INTEGER,
         FOREIGN KEY (peca_id) REFERENCES pecas(id),
         FOREIGN KEY (ordem_servico_id) REFERENCES ordem_servico(id)
