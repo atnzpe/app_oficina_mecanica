@@ -17,6 +17,7 @@ from typing import Optional, List
 
 class Estabelecimento:
     """Representa um estabelecimento (oficina) no sistema."""
+
     def __init__(self, id: int, nome: str,
                  endereco: Optional[str] = None,
                  telefone: Optional[str] = None,
@@ -142,3 +143,21 @@ class Servico:
         self.ativo: bool = ativo
         # Este atributo será populado sob demanda pelas queries, não corresponde a uma coluna.
         self.pecas: List[Peca] = []
+
+
+class MovimentacaoPeca:
+    """Representa um registro de movimentação de estoque."""
+
+    def __init__(self, id: int, peca_id: int, data_movimentacao: str,
+                 tipo_movimentacao: str, quantidade: int,
+                 ordem_servico_id: Optional[int] = None,
+                 valor_custo: Optional[float] = None,
+                 descricao: Optional[str] = None):
+        self.id: int = id
+        self.peca_id: int = peca_id
+        self.data_movimentacao: str = data_movimentacao
+        self.tipo_movimentacao: str = tipo_movimentacao  # 'entrada' ou 'saida'
+        self.quantidade: int = quantidade
+        self.ordem_servico_id: Optional[int] = ordem_servico_id
+        self.valor_custo: Optional[float] = valor_custo
+        self.descricao: Optional[str] = descricao
