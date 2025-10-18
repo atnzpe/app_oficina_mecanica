@@ -5,13 +5,17 @@
 #   - O formulário foi expandido para incluir todos os campos detalhados
 #     do estabelecimento (Endereço, Telefone, CPF/CNPJ, etc.).
 # =================================================================================
-
 import flet as ft
 import logging
+# Importa o ViewModel correspondente que gerencia a lógica desta view.
 from src.viewmodels.onboarding_viewmodel import OnboardingViewModel
+# Importa as classes de estilo para fontes e dimensões.
 from src.styles.style import AppFonts, AppDimensions
 
+# Configura o logger para este módulo.
 logger = logging.getLogger(__name__)
+
+# --- CONTEÚDO DA PÁGINA ---
 
 
 class OnboardingView(ft.Column):
@@ -20,22 +24,28 @@ class OnboardingView(ft.Column):
     """
 
     def __init__(self, page: ft.Page):
+        # Chama o construtor da classe pai (ft.Column).
         super().__init__()
 
+        # Armazena a referência da página principal do Flet.
         self.page = page
+
+        # Instancia e vincula o ViewModel correspondente.
         self.view_model = OnboardingViewModel(page)
         self.view_model.vincular_view(self)
 
+        # Se não houver usuário na sessão, o ViewModel lida com o redirecionamento.
         if not self.view_model.user:
             self.page.go("/login")
             return
 
+        # Log para registrar qual usuário está vendo a tela de onboarding.
         logger.info(
             f"Criando a view de onboarding para o usuário: {self.view_model.user.nome}")
 
-        # --- Configurações de Layout ---
+        # --- Configurações de Layout da Coluna ---
         self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-        # Mudar para START para formulários longos
+        # Alinhamento no TOPO para formulários longos
         self.alignment = ft.MainAxisAlignment.START
         self.spacing = 15
         # Habilita a rolagem
@@ -52,10 +62,10 @@ class OnboardingView(ft.Column):
             border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS)
         )
 
-        # --- Seção 2: Dados do Estabelecimento ---
+        # --- Seção 2: Dados do Estabelecimento (NOVOS CAMPOS) ---
         self._establishment_name_field = ft.TextField(
             label="Nome da Oficina*",
-            hint_text="Ex: Oficina do João",
+            hint_text="Ex: Oficina do Gleyson",
             width=AppDimensions.FIELD_WIDTH,
             prefix_icon=ft.Icons.STORE,
             border_radius=ft.border_radius.all(AppDimensions.BORDER_RADIUS),
@@ -91,9 +101,11 @@ class OnboardingView(ft.Column):
             hint_text="Telefone, e-mail, CNPJ ou chave aleatória",
             width=AppDimensions.FIELD_WIDTH,
             prefix_icon=ft.Icons.PAYMENT,
-            border_radius=AppDimensions.BORDER_RADIUS
+            border_radius=AppDimensions.BORDER_RADIUS,
+            on_submit=self.view_model.save_onboarding_data  # Permite salvar com Enter
         )
 
+        # --- Controles de Feedback ---
         self._error_text = ft.Text(value="", visible=False, color="red")
         self._progress_ring = ft.ProgressRing(
             width=20, height=20, stroke_width=2, visible=False)
@@ -133,6 +145,8 @@ class OnboardingView(ft.Column):
             self._error_text,
             ft.Row([self._save_button, self._progress_ring],
                    alignment=ft.MainAxisAlignment.CENTER),
+            # Adiciona um espaçador no final para rolagem
+            ft.Container(height=20)
         ]
 
     def obter_dados_formulario(self) -> dict:
@@ -150,8 +164,8 @@ class OnboardingView(ft.Column):
     def mostrar_progresso(self, visivel: bool):
         """Controla a visibilidade dos campos e do anel de progresso."""
         self._progress_ring.visible = visivel
-        self_save_button_disabled = visivel
-        # Desabilita todos os campos durante o progresso
+        self._save_button.disabled = visivel
+        # Desabilita todos os campos de texto durante o progresso
         for control in self.controls:
             if isinstance(control, ft.TextField):
                 control.disabled = visivel
@@ -170,10 +184,12 @@ def OnboardingViewFactory(page: ft.Page) -> ft.View:
     """Cria a View completa de Onboarding para o roteador."""
     return ft.View(
         route="/onboarding",
-        vertical_alignment=ft.MainAxisAlignment.CENTER,
+        vertical_alignment=ft.MainAxisAlignment.START,  # Alinhado ao topo
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         padding=AppDimensions.PAGE_PADDING,
         controls=[
             OnboardingView(page)
-        ]
+        ],
+        # Garante que a barra de rolagem funcione corretamente
+        scroll=ft.ScrollMode.ADAPTIVE
     )

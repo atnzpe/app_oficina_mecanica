@@ -155,12 +155,13 @@ def complete_onboarding(user_id: int, user_name: str, dados_estabelecimento: dic
         f"Iniciando transação de onboarding para o usuário ID {user_id}.")
     conn = get_db_connection()
     if not conn:
+        logger.error("Falha ao obter conexão com o banco para onboarding.")
         return
 
     try:
         cursor = conn.cursor()
 
-        # 1. Cria o novo estabelecimento com todos os dados.
+        # 1. Cria o novo estabelecimento com todos os dados detalhados.
         sql_insert_est = """
             INSERT INTO estabelecimentos (
                 nome, endereco, telefone, responsavel, cpf_cnpj, chave_pix
@@ -198,6 +199,78 @@ def complete_onboarding(user_id: int, user_name: str, dados_estabelecimento: dic
     finally:
         if conn:
             conn.close()
+
+# =================================================================================
+# QUERIES DE ESTABELECIMENTO (NOVO)
+# =================================================================================
+
+
+def obter_estabelecimento_por_id_usuario(usuario_id: int) -> Estabelecimento | None:
+    """
+    Busca os dados do estabelecimento vinculado a um ID de usuário.
+    É usado para carregar a tela 'Dados da Oficina'.
+    :param usuario_id: O ID do usuário logado.
+    :return: Um objeto Estabelecimento ou None.
+    """
+    # Log para registrar o início da busca
+    logger.debug(f"Buscando estabelecimento para o usuário ID: {usuario_id}")
+    # SQL para juntar tabelas de usuarios e estabelecimentos
+    sql = """
+        SELECT e.* FROM estabelecimentos e
+        JOIN usuarios u ON u.id_estabelecimento = e.id
+        WHERE u.id = ?
+    """
+    try:
+        # Garante o gerenciamento seguro da conexão
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            # Executa a query com o ID do usuário
+            result = cursor.execute(sql, (usuario_id,)).fetchone()
+            # Se um resultado for encontrado, converte o sqlite3.Row em um objeto Estabelecimento
+            # A classe Estabelecimento deve ter sido atualizada para aceitar os novos campos no __init__
+            return Estabelecimento(**result) if result else None
+    except Exception as e:
+        # Log detalhado em caso de falha na consulta
+        logging.error(
+            f"Erro ao obter estabelecimento por ID de usuário {usuario_id}: {e}", exc_info=True)
+        return None
+
+
+def atualizar_estabelecimento(estabelecimento_id: int, dados: dict) -> bool:
+    """
+    Atualiza os dados de um estabelecimento específico no banco de dados.
+    :param estabelecimento_id: O ID do estabelecimento a ser atualizado.
+    :param dados: Um dicionário contendo todos os novos dados.
+    :return: True se a atualização foi bem-sucedida, False caso contrário.
+    """
+    logger.info(
+        f"Executando query para atualizar estabelecimento ID: {estabelecimento_id}")
+    # Query SQL parametrizada para atualizar todos os campos
+    sql = """
+        UPDATE estabelecimentos SET
+            nome = ?, endereco = ?, telefone = ?, responsavel = ?,
+            cpf_cnpj = ?, chave_pix = ?
+        WHERE id = ?
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            # Executa a atualização
+            cursor.execute(sql, (
+                dados['nome'], dados['endereco'], dados['telefone'],
+                dados['responsavel'], dados['cpf_cnpj'], dados['chave_pix'],
+                estabelecimento_id
+            ))
+            # Confirma (salva) a transação no banco
+            conn.commit()
+            # Retorna True se pelo menos uma linha foi afetada (ou seja, a atualização ocorreu)
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        # Log detalhado em caso de falha na atualização
+        logger.error(
+            f"Erro ao atualizar estabelecimento ID {estabelecimento_id}: {e}", exc_info=True)
+        return False
+
 
 # =================================================================================
 # QUERIES DE MECÂNICOS (NOVO)

@@ -82,7 +82,8 @@ def get_db_connection() -> sqlite3.Connection | None:
         # Tenta conectar ao arquivo do banco de dados.
         # Se o arquivo não existir, o SQLite o criará automaticamente.
         conn = sqlite3.connect(NOME_BANCO_DE_DADOS)
-        logger.debug("Conexão física com o arquivo do banco de dados estabelecida.")
+        logger.debug(
+            "Conexão física com o arquivo do banco de dados estabelecida.")
 
         # Configura a conexão para que as linhas retornadas se comportem como dicionários.
         # Isso permite acessar colunas pelo nome (ex: row['nome']) em vez de índice (ex: row[1]),
@@ -128,11 +129,11 @@ CREATE_TABLES_SQL = [
         telefone TEXT,
         responsavel TEXT,
         cpf_cnpj TEXT,
-        logo_path IM,
+        logo_path TEXT,
         chave_pix TEXT
     );
     """,
-    # Tabela de Usuários: agora com vínculo ao estabelecimento.
+    # --- Tabela de Usuários: permanece a mesma, para login e controle de acesso.
     """
     CREATE TABLE IF NOT EXISTS usuarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -143,9 +144,9 @@ CREATE_TABLES_SQL = [
         FOREIGN KEY (id_estabelecimento) REFERENCES estabelecimentos(id)
     );
     """,
-    
-    #Tabela de Mecânicos: permanece a mesma, para os funcionários da oficina.
-     """
+
+    # Tabela de Mecânicos: permanece a mesma, para os funcionários da oficina.
+    """
     CREATE TABLE IF NOT EXISTS mecanicos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nome TEXT NOT NULL,
@@ -155,8 +156,8 @@ CREATE_TABLES_SQL = [
         especialidade TEXT,
         ativo BOOLEAN DEFAULT 1
     );
-    """,    
-    
+    """,
+
     # Tabela de Clientes: permanece a mesma, para os clientes da oficina.
     """
     CREATE TABLE IF NOT EXISTS clientes (
@@ -183,7 +184,7 @@ CREATE_TABLES_SQL = [
         FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
     );
     """,
-    
+
     # --- Tabela de Peças: permanece a mesma, para o inventário de peças.
     """
     CREATE TABLE IF NOT EXISTS pecas (
@@ -221,8 +222,8 @@ CREATE_TABLES_SQL = [
     );
     """,
     # --- Tabela de Ordens de Serviço: permanece a mesma, para registrar os serviços realizados.
-    
-    
+
+
     """
     CREATE TABLE IF NOT EXISTS ordem_servico (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -281,62 +282,28 @@ CREATE_TABLES_SQL = [
 def initialize_database():
     """
     Executa o script de criação para todas as tabelas do banco de dados.
-    Esta função deve ser chamada uma única vez na inicialização da aplicação.
     """
-    # Log que marca o início do processo de setup do banco.
     logger.info("Iniciando a inicialização do esquema do banco de dados...")
-    # Obtém uma conexão usando a função centralizada.
     conn = get_db_connection()
-
-    # Verifica se a conexão falhou. Se sim, a aplicação não pode continuar.
     if conn is None:
         logger.critical(
-            "NÃO FOI POSSÍVEL INICIALIZAR O BANCO DE DADOS: FALHA NA CONEXÃO."
-        )
-        return  # Interrompe a execução da função.
+            "NÃO FOI POSSÍVEL INICIALIZAR O BANCO DE DADOS: FALHA NA CONEXÃO.")
+        return
 
     try:
-        # Cria um 'cursor', que é o objeto usado para executar comandos SQL.
         cursor = conn.cursor()
-        logger.debug(
-            "Cursor criado. Iniciando a execução dos comandos de criação de tabelas."
-        )
-
-        # Itera sobre a lista de comandos SQL definida anteriormente.
         for table_sql in CREATE_TABLES_SQL:
-            # Log para cada tabela que está sendo criada/verificada.
-            logger.debug(f"Executando comando: {table_sql.strip()}")
-            # Executa o comando SQL.
             cursor.execute(table_sql)
-
-        # Após executar todos os comandos, 'commita' as alterações.
-        # Isso salva todas as criações de tabelas de uma vez.
         conn.commit()
         logger.info("Esquema do banco de dados verificado/criado com sucesso.")
-
-    # Captura qualquer erro do SQLite que possa ocorrer durante a criação das tabelas.
     except sqlite3.Error as e:
-        # Se um erro ocorrer, registra-o detalhadamente.
-        logger.error(f"Ocorreu um erro ao criar as tabelas: {e}", exc_info=True)
-        # E o mais importante: desfaz quaisquer alterações que possam ter sido feitas.
-        # Isso garante que o banco não fique em um estado "meio criado" ou corrompido.
+        logger.error(
+            f"Ocorreu um erro ao criar as tabelas: {e}", exc_info=True)
         conn.rollback()
-
-    # O bloco 'finally' é sempre executado, tenha ocorrido um erro ou não.
     finally:
-        # Garante que a conexão com o banco de dados seja sempre fechada.
         if conn:
             conn.close()
-            logger.debug("Conexão com o banco de dados fechada após a inicialização.")
 
 
-# --- BLOCO DE EXECUÇÃO PRINCIPAL ---
-
-# Este bloco só é executado quando o arquivo é chamado diretamente pelo terminal
-# (ex: `python -m src.database.database`).
-# Isso permite criar e configurar o banco de dados sem precisar rodar a aplicação inteira.
 if __name__ == "__main__":
-    logger.info(
-        "Módulo de banco de dados executado diretamente. Iniciando a inicialização."
-    )
     initialize_database()
