@@ -263,7 +263,7 @@ CREATE_TABLES_SQL = [
         FOREIGN KEY (peca_id) REFERENCES pecas(id),
         FOREIGN KEY (ordem_servico_id) REFERENCES ordem_servico(id)
     );
-    """
+    """,
     # Tabela de Auditoria
     # Registra ações importantes realizadas no sistema.
     """
