@@ -144,16 +144,15 @@ def has_establishment(user_id: int) -> bool:
         return True
 
 
-def complete_onboarding(user_id: int, user_name: str, establishment_name: str):
+def complete_onboarding(user_id: int, user_name: str, dados_estabelecimento: dict):
     """
     Salva os dados do onboarding.
-    1. Cria o novo estabelecimento.
+    1. Cria o novo estabelecimento com todos os dados.
     2. Vincula o ID do novo estabelecimento ao usuário.
     3. Atualiza o nome do usuário.
     """
     logger.info(
         f"Iniciando transação de onboarding para o usuário ID {user_id}.")
-    # Abre a conexão manualmente para controlar a transação.
     conn = get_db_connection()
     if not conn:
         return
@@ -161,12 +160,23 @@ def complete_onboarding(user_id: int, user_name: str, establishment_name: str):
     try:
         cursor = conn.cursor()
 
-        # 1. Cria o novo estabelecimento.
-        cursor.execute(
-            "INSERT INTO estabelecimentos (nome) VALUES (?)", (establishment_name,))
+        # 1. Cria o novo estabelecimento com todos os dados.
+        sql_insert_est = """
+            INSERT INTO estabelecimentos (
+                nome, endereco, telefone, responsavel, cpf_cnpj, chave_pix
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        """
+        cursor.execute(sql_insert_est, (
+            dados_estabelecimento['nome'],
+            dados_estabelecimento['endereco'],
+            dados_estabelecimento['telefone'],
+            dados_estabelecimento['responsavel'],
+            dados_estabelecimento['cpf_cnpj'],
+            dados_estabelecimento['chave_pix']
+        ))
         establishment_id = cursor.lastrowid
         logger.debug(
-            f"Estabelecimento '{establishment_name}' criado com ID: {establishment_id}.")
+            f"Estabelecimento '{dados_estabelecimento['nome']}' criado com ID: {establishment_id}.")
 
         # 2. Vincula o estabelecimento ao usuário e atualiza o nome.
         cursor.execute(
@@ -184,7 +194,6 @@ def complete_onboarding(user_id: int, user_name: str, establishment_name: str):
         logger.error(
             f"Erro ao salvar dados do onboarding. A transação será revertida (rollback): {e}", exc_info=True)
         conn.rollback()
-        # Re-levanta a exceção para o ViewModel saber que algo deu errado.
         raise
     finally:
         if conn:

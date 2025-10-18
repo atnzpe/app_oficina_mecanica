@@ -60,8 +60,9 @@ class MinhaContaViewModel:
         # --- Feedback para o Usuário ---
         if sucesso:
             # Em caso de sucesso, limpa o formulário e exibe a mensagem.
+            acao_navegacao = lambda: self.page.go("/dashboard")
             self._view.limpar_formulario()
-            self._view.mostrar_dialogo_feedback("Sucesso!", mensagem)
+            self._view.mostrar_dialogo_feedback("Sucesso!", mensagem,acao_navegacao)
         else:
             # Em caso de falha, apenas exibe a mensagem de erro retornada pelo serviço.
             self._view.mostrar_dialogo_feedback("Falha na Alteração", mensagem)

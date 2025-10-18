@@ -123,7 +123,13 @@ CREATE_TABLES_SQL = [
     """
     CREATE TABLE IF NOT EXISTS estabelecimentos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nome TEXT NOT NULL
+        nome TEXT NOT NULL,
+        endereco TEXT,
+        telefone TEXT,
+        responsavel TEXT,
+        cpf_cnpj TEXT,
+        logo_path IM,
+        chave_pix TEXT
     );
     """,
     # Tabela de Usuários: agora com vínculo ao estabelecimento.

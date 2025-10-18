@@ -1,9 +1,9 @@
-
 # =================================================================================
 # MÓDULO DO VIEWMODEL DE ONBOARDING (onboarding_viewmodel.py)
-# Local: src/viewmodels/onboarding_viewmodel.py
 #
-# OBJETIVO: Conter a lógica de negócio para a tela de configuração inicial.
+# ATUALIZAÇÃO:
+#   - A função `save_onboarding_data` foi refatorada para coletar todos os
+#     campos detalhados do estabelecimento e passá-los para a query.
 # =================================================================================
 import flet as ft
 import logging
@@ -17,9 +17,7 @@ class OnboardingViewModel:
     """
     def __init__(self, page: ft.Page):
         self.page = page
-        # A referência à View é armazenada para poder comandá-la.
         self._view: 'OnboardingView' | None = None
-        # O usuário logado é recuperado da sessão da página.
         self.user = self.page.session.get("usuario_logado")
 
     def vincular_view(self, view: 'OnboardingView'):
@@ -30,33 +28,45 @@ class OnboardingViewModel:
         """
         Pega os dados da View, valida, e comanda a atualização no banco de dados.
         """
-        # Verificação de segurança: não faz nada se a View não estiver vinculada.
         if not self._view:
             return
         
-        # 1. SOLICITA DADOS DA VIEW: O ViewModel pede os dados à View.
+        # 1. SOLICITA DADOS DA VIEW
         dados = self._view.obter_dados_formulario()
-        user_name = dados.get("user_name")
-        establishment_name = dados.get("establishment_name")
+        user_name = dados.get("user_name").strip()
+        establishment_name = dados.get("nome").strip() # O nome da oficina está em 'nome'
 
-        # 2. LÓGICA DE NEGÓCIO E VALIDAÇÃO.
+        # 2. LÓGICA DE VALIDAÇÃO (Campos obrigatórios)
         if not user_name or not establishment_name:
-            # 3. COMANDA A VIEW: O ViewModel comanda a View para mostrar um erro.
-            self._view.mostrar_erro("Todos os campos são obrigatórios.")
+            self._view.mostrar_erro("Seu Nome e o Nome da Oficina são obrigatórios.")
             return
 
-        # 4. COMANDA A VIEW: Inicia o feedback visual de progresso.
         self._view.mostrar_progresso(True)
         
-        # 5. INTERAÇÃO COM A CAMADA DE DADOS.
+        # 3. INTERAÇÃO COM A CAMADA DE DADOS
         logger.info(f"Salvando dados de onboarding para o usuário ID: {self.user.id}")
-        queries.complete_onboarding(
-            user_id=self.user.id,
-            user_name=user_name,
-            establishment_name=establishment_name,
-        )
-
-        # A lógica de negócio aqui poderia incluir atualizar o nome do usuário na sessão, se desejado.
         
-        # 6. NAVEGAÇÃO: Após o sucesso, comanda a página para ir ao dashboard.
-        self.page.go("/dashboard")
+        # Prepara o dicionário de dados do estabelecimento para a query
+        dados_estabelecimento = {
+            "nome": establishment_name,
+            "endereco": dados.get("endereco", "").strip(),
+            "telefone": dados.get("telefone", "").strip(),
+            "responsavel": dados.get("responsavel", "").strip(),
+            "cpf_cnpj": dados.get("cpf_cnpj", "").strip(),
+            "chave_pix": dados.get("chave_pix", "").strip(),
+        }
+        
+        try:
+            queries.complete_onboarding(
+                user_id=self.user.id,
+                user_name=user_name,
+                dados_estabelecimento=dados_estabelecimento
+            )
+            
+            # 4. NAVEGAÇÃO
+            self.page.go("/dashboard")
+            
+        except Exception as e:
+            logger.error(f"Falha ao salvar onboarding: {e}", exc_info=True)
+            self._view.mostrar_progresso(False)
+            self._view.mostrar_erro("Falha ao salvar os dados. Tente novamente.")

@@ -63,7 +63,7 @@ class DashboardView(ft.Column):
                     self._criar_sub_item(
                         "Serviços", ft.Icons.MISCELLANEOUS_SERVICES_OUTLINED, "/gerir_servicos"),
                     self._criar_sub_item(
-                        "Minha Conta", ft.Icons.ACCOUNT_CIRCLE_OUTLINED, "/minha_conta")
+                        "Minha Conta", ft.Icons.ACCOUNT_CIRCLE_OUTLINED, "/minha_conta"),
                     self._criar_sub_item(
                         "Usuários", ft.Icons.ADMIN_PANEL_SETTINGS_OUTLINED, "/usuarios"),
                     self._criar_sub_item(
