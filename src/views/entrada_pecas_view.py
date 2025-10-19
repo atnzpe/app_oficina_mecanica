@@ -1,14 +1,16 @@
 # =================================================================================
 # MÓDULO DA VIEW DE ENTRADA DE PEÇAS (entrada_pecas_view.py)
 #
-# OBJETIVO: Criar o formulário para registrar a entrada de peças (Issue #32).
+# ATUALIZAÇÃO (Issue #32 - Lote):
+#   - UI refatorada para suportar a adição de múltiplos itens.
+#   - Adicionado um ListView para mostrar os itens no lote.
 # =================================================================================
 import flet as ft
 import logging
 from src.viewmodels.entrada_pecas_viewmodel import EntradaPecasViewModel
 from src.models.models import Peca
 from src.styles.style import AppDimensions, AppFonts
-from typing import Callable, Optional, List
+from typing import Callable, Optional, List, Dict, Any
 from threading import Timer
 
 logger = logging.getLogger(__name__)
@@ -16,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 class EntradaPecasView(ft.Column):
     """
-    A View para o formulário de Entrada de Peças.
+    A View para o formulário de Entrada de Peças em Lote.
     """
 
     def __init__(self, page: ft.Page):
@@ -28,11 +30,12 @@ class EntradaPecasView(ft.Column):
         self._acao_pos_dialogo: Optional[Callable[[], None]] = None
 
         # --- Layout ---
-        self.alignment = ft.MainAxisAlignment.CENTER
+        self.alignment = ft.MainAxisAlignment.START  # Alinha ao topo
         self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
         self.spacing = 15
+        self.scroll = ft.ScrollMode.ADAPTIVE  # Permite rolagem da página inteira
 
-        # --- Componentes do Formulário ---
+        # --- Componentes do Formulário (Item Único) ---
         self._peca_dropdown = ft.Dropdown(
             label="Selecione a Peça*",
             width=AppDimensions.FIELD_WIDTH,
@@ -54,34 +57,69 @@ class EntradaPecasView(ft.Column):
         )
         self._descricao_field = ft.TextField(
             label="Descrição (Opcional)",
-            hint_text="Ex: NF 12345, Compra avulsa",
+            hint_text="Ex: NF 12345",
             width=AppDimensions.FIELD_WIDTH,
             border_radius=AppDimensions.BORDER_RADIUS
+        )
+        self._add_item_button = ft.ElevatedButton(
+            "Adicionar à Lista",
+            icon=ft.Icons.ADD_SHOPPING_CART,
+            on_click=lambda _: self.view_model.adicionar_item_ao_lote(),
+            width=AppDimensions.FIELD_WIDTH
+        )
+
+        # --- Componente da Lista (Lote) ---
+        self._lote_list_view = ft.ListView(expand=True, spacing=5, padding=10)
+
+        # --- Botões de Ação Principais ---
+        self._registrar_lote_button = ft.ElevatedButton(
+            "Registrar Lote de Entrada",
+            icon=ft.Icons.SAVE,
+            on_click=lambda _: self.view_model.registrar_lote_entrada(),
+        )
+        self._cancelar_button = ft.ElevatedButton(
+            "Cancelar",
+            on_click=self.view_model.cancelar
         )
 
         self._dialogo_feedback = ft.AlertDialog(
             modal=True, title=ft.Text(), content=ft.Text(), actions=[])
 
+        # --- Estrutura da View ---
         self.controls = [
             ft.Text("Registrar Entrada de Peças",
                     size=AppFonts.TITLE_MEDIUM, weight=ft.FontWeight.BOLD),
+
+            ft.Divider(),
+            ft.Text("Adicionar Item ao Lote", size=AppFonts.BODY_LARGE),
             self._peca_dropdown,
             self._quantidade_field,
             self._valor_custo_field,
             self._descricao_field,
+            self._add_item_button,
+
+            ft.Divider(),
+            ft.Text("Itens no Lote de Entrada", size=AppFonts.BODY_LARGE),
+            ft.Container(
+                content=self._lote_list_view,
+                border=ft.border.all(1, ft.Colors.OUTLINE),
+                border_radius=ft.border_radius.all(
+                    AppDimensions.BORDER_RADIUS),
+                padding=5,
+                width=AppDimensions.FIELD_WIDTH,
+                height=200  # Altura fixa para a lista de itens
+            ),
+
             ft.Row(
                 [
-                    ft.ElevatedButton(
-                        "Cancelar", on_click=self.view_model.cancelar),
-                    ft.ElevatedButton("Registrar Entrada", icon=ft.Icons.SAVE,
-                                      on_click=lambda _: self.view_model.registrar_entrada()),
+                    self._cancelar_button,
+                    self._registrar_lote_button,
                 ],
                 alignment=ft.MainAxisAlignment.END, width=AppDimensions.FIELD_WIDTH, spacing=10
             )
         ]
 
     def did_mount(self):
-        """Chamado pelo Flet quando a view é montada."""
         logger.debug("View 'Entrada de Peças' montada. Carregando peças...")
         self.view_model.carregar_pecas_ativas()
 
@@ -94,8 +132,8 @@ class EntradaPecasView(ft.Column):
         ]
         self.update()
 
-    def obter_dados_formulario(self) -> dict:
-        """Coleta, converte e retorna os dados do formulário."""
+    def obter_dados_item_formulario(self) -> dict:
+        """Coleta os dados do formulário de *item único*."""
         peca_id = int(
             self._peca_dropdown.value) if self._peca_dropdown.value else None
 
@@ -103,13 +141,14 @@ class EntradaPecasView(ft.Column):
             quantidade = int(
                 self._quantidade_field.value) if self._quantidade_field.value else 0
         except (ValueError, TypeError):
-            quantidade = None  # Sinaliza erro de tipo
+            quantidade = None
 
         try:
-            valor_custo = float(self._valor_custo_field.value.replace(
-                ",", ".")) if self._valor_custo_field.value else None
+            valor_custo_str = self._valor_custo_field.value.replace(
+                ",", ".") if self._valor_custo_field.value else None
+            valor_custo = float(valor_custo_str) if valor_custo_str else None
         except (ValueError, TypeError):
-            valor_custo = -1  # Sinaliza erro de tipo (diferente de None)
+            valor_custo = -1
 
         return {
             "peca_id": peca_id,
@@ -118,13 +157,39 @@ class EntradaPecasView(ft.Column):
             "descricao": self._descricao_field.value,
         }
 
-    def limpar_formulario(self):
-        """Limpa todos os campos do formulário após o sucesso."""
-        logger.debug("View: Limpando formulário de entrada de peças.")
+    def limpar_formulario_item(self):
+        """Limpa os campos de adição de item."""
         self._peca_dropdown.value = None
         self._quantidade_field.value = ""
         self._valor_custo_field.value = ""
         self._descricao_field.value = ""
+        self._peca_dropdown.focus()  # Foca no dropdown para o próximo item
+        self.update()
+
+    def atualizar_lista_lote(self, lote: List[Dict[str, Any]]):
+        """Atualiza o ListView com os itens do lote."""
+        self._lote_list_view.controls.clear()
+        if not lote:
+            self._lote_list_view.controls.append(
+                ft.Text("Nenhum item adicionado ao lote."))
+        else:
+            for item in lote:
+                self._lote_list_view.controls.append(
+                    ft.ListTile(
+                        title=ft.Text(
+                            f"{item['nome_peca']} (Qtd: {item['quantidade']})"),
+                        subtitle=ft.Text(
+                            f"Custo: R$ {item['valor_custo'] or 0.0:.2f} - Desc: {item['descricao'] or 'N/A'}"),
+                        trailing=ft.IconButton(
+                            icon=ft.Icons.DELETE_OUTLINE,
+                            icon_color=ft.Colors.RED_400,
+                            tooltip="Remover item do lote",
+                            data=item,  # Armazena o dict do item no botão
+                            on_click=lambda e: self.view_model.remover_item_do_lote(
+                                e.control.data)
+                        )
+                    )
+                )
         self.update()
 
     # --- Métodos de Diálogo (Padrão com Overlay) ---
@@ -149,6 +214,15 @@ class EntradaPecasView(ft.Column):
             self._dialogo_feedback.open = False
             self.page.update()
 
+    def mostrar_feedback_snackbar(self, mensagem: str, sucesso: bool):
+        """Exibe uma SnackBar para feedback rápido (ex: validação de item)."""
+        self.page.snack_bar = ft.SnackBar(
+            content=ft.Text(mensagem),
+            bgcolor=self.page.theme.color_scheme.primary if sucesso else self.page.theme.color_scheme.error
+        )
+        self.page.snack_bar.open = True
+        self.page.update()
+
 
 def EntradaPecasViewFactory(page: ft.Page) -> ft.View:
     """Cria a View completa de Entrada de Peças para o roteador."""
@@ -161,6 +235,6 @@ def EntradaPecasViewFactory(page: ft.Page) -> ft.View:
                 "/dashboard"), tooltip="Voltar ao Dashboard")
         ),
         controls=[ft.SafeArea(content=ft.Container(content=EntradaPecasView(
-            page), alignment=ft.alignment.center, expand=True), expand=True)],
+            page), alignment=ft.alignment.center, expand=True, padding=AppDimensions.PAGE_PADDING), expand=True)],
         padding=0
     )
