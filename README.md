@@ -91,9 +91,9 @@ Nosso roadmap é gerenciado através das [**Issues do GitHub**](https://github.c
 * ✅ **Issue #29: CRUD de Minha Conta (Concluído)**
 * ✅ **Issue #30: CRUD de Estabelecimento (Concluído)**
 
-### **FASE 3: Módulos Operacionais (Planejado)**
-* ⏳ **Entrada de Peças:** Registrar a compra de novas peças.
-* ⏳ **Saída de Peças Avulsa:** Registrar a venda de peças fora de uma OS.
+### **FASE 3: Módulos Operacionais (Em Andamento)**
+* ✅ **Issue #32: Entrada de Peças (Concluído)**
+* 🚧 **Saída de Peças Avulsa:** Registrar a venda de peças fora de uma OS.
 * ⏳ **Criação de Ordem de Serviço (OS):** Módulo central da aplicação.
 
 ### **FASE 4: Inteligência e Relatórios (Planejado)**
