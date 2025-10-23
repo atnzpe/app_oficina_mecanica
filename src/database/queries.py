@@ -17,7 +17,7 @@
 import logging
 import sqlite3
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 # --- IMPORTAÇÕES DO PROJETO ---
 
@@ -828,6 +828,18 @@ def ativar_peca_por_id(peca_id: int) -> bool:
         logger.error(f"Erro ao ativar peça ID {peca_id}: {e}", exc_info=True)
         return False
 
+def atualizar_estoque_peca(peca_id: int, quantidade_movimentada: int, cursor: sqlite3.Cursor):
+    """
+    Atualiza o estoque de uma peça.
+    Recebe um cursor para operar dentro de uma transação existente.
+    """
+    logger.info(
+        f"Executando query (via transação) para atualizar estoque da peça {peca_id}. Movimentação: {quantidade_movimentada}")
+    cursor.execute(
+        "UPDATE pecas SET quantidade_em_estoque = quantidade_em_estoque + ? WHERE id = ?",
+        (quantidade_movimentada, peca_id),
+    )
+    logger.info(f"Estoque da peça {peca_id} atualizado com sucesso.")
 
 def quantidade_em_estoque_suficiente(peca_id: int, quantidade_necessaria: int) -> bool:
     """Verifica se a quantidade em estoque é suficiente para a peça."""
@@ -900,7 +912,9 @@ def registrar_entrada_estoque(peca_id: int, quantidade: int, valor_custo: Option
         # Garante que a conexão seja fechada
         if conn:
             conn.close()
-            
+           
+           
+           
 # =================================================================================
 # QUERIES DE SERVIÇOS
 # =================================================================================
@@ -1117,19 +1131,86 @@ def inserir_ordem_servico(cliente_id: int, carro_id: int, pecas_quantidades: dic
             conn.close()
 
 
-def inserir_movimentacao_peca(peca_id: int, tipo_movimentacao: str, quantidade: int, ordem_servico_id: int | None):
-    """Insere uma nova movimentação de peça no banco de dados."""
+def inserir_movimentacao_peca(
+    peca_id: int,
+    tipo_movimentacao: str,
+    quantidade: int,
+    cursor: sqlite3.Cursor, # Recebe o cursor para transação
+    valor_custo: Optional[float] = None,
+    descricao: Optional[str] = None,
+    ordem_servico_id: Optional[int] = None
+):
+    """
+    Insere uma nova movimentação de peça no banco de dados.
+    Recebe um cursor para operar dentro de uma transação existente.
+    """
     logger.info(
-        f"Registrando movimentação de estoque: Peça ID {peca_id}, Tipo: {tipo_movimentacao}, Qtd: {quantidade}")
+        f"Registrando movimentação de estoque (via transação): Peça ID {peca_id}, Tipo: {tipo_movimentacao}, Qtd: {quantidade}")
+    data_hora_atual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # Query SQL atualizada para incluir os novos campos
+    sql = """
+        INSERT INTO movimentacao_pecas 
+            (peca_id, data_movimentacao, tipo_movimentacao, quantidade, valor_custo, descricao, ordem_servico_id) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """
+    cursor.execute(sql, (
+        peca_id, data_hora_atual, tipo_movimentacao,
+        quantidade, valor_custo, descricao, ordem_servico_id
+    ))
+
+def registrar_entrada_estoque_lote(lote_itens: List[Dict[str, Any]]) -> bool:
+    """
+    Registra uma entrada de MÚLTIPLAS peças no estoque de forma transacional.
+    :param lote_itens: Uma lista de dicionários, onde cada dict contém:
+                       {'peca_id', 'quantidade', 'valor_custo', 'descricao'}
+    """
+    if not lote_itens:
+        logger.warning("Tentativa de registrar um lote de entrada vazio.")
+        return False
+        
+    logger.info(f"Iniciando transação de entrada de estoque para LOTE de {len(lote_itens)} itens.")
+    
+    conn = get_db_connection()
+    if not conn:
+        logger.error("Falha ao obter conexão com o banco para registrar lote.")
+        return False
+    
     try:
-        with get_db_connection() as conn:
-            conn.execute(
-                "INSERT INTO movimentacao_pecas (peca_id, data_movimentacao, tipo_movimentacao, quantidade, ordem_servico_id) VALUES (?, ?, ?, ?, ?)",
-                (peca_id, datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                 tipo_movimentacao, quantidade, ordem_servico_id),
+        cursor = conn.cursor()
+        
+        # Itera sobre cada item no lote
+        for item in lote_itens:
+            peca_id = item['peca_id']
+            quantidade = item['quantidade']
+            
+            # Validação dentro do loop (mas antes da execução)
+            if quantidade <= 0:
+                # Se qualquer item for inválido, reverte a transação inteira
+                raise ValueError(f"Quantidade inválida ({quantidade}) para a peça ID {peca_id}.")
+
+            # 1. Atualiza o estoque na tabela 'pecas'
+            atualizar_estoque_peca(peca_id, quantidade, cursor)
+            
+            # 2. Registra a movimentação de 'entrada'
+            inserir_movimentacao_peca(
+                peca_id=peca_id,
+                tipo_movimentacao='entrada',
+                quantidade=quantidade,
+                cursor=cursor,
+                valor_custo=item.get('valor_custo'), # Usa .get() para campos opcionais
+                descricao=item.get('descricao')
             )
-            conn.commit()
-    except sqlite3.Error as e:
-        logger.error(
-            f"Erro ao inserir movimentação de peça: {e}", exc_info=True)
-        raise
+            
+        # 3. Confirma a transação (somente se TODOS os itens do loop derem certo)
+        conn.commit()
+        logger.info(f"Transação de entrada de lote concluída com sucesso.")
+        return True
+        
+    except (sqlite3.Error, ValueError) as e:
+        # Em caso de qualquer erro, desfaz toda a operação
+        logger.error(f"Erro na transação de entrada de lote: {e}", exc_info=True)
+        conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
